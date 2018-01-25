@@ -1,6 +1,5 @@
 import Singleton from './util/Singleton';
 import {parseString} from 'xml2js';
-import {readFileSync} from 'fs';
 import DroneCommand from './DroneCommand';
 
 
