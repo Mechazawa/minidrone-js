@@ -7,7 +7,11 @@
   "author": "Bas <mega@ioexception.at>",
   "license": "MIT",
   "dependencies": {
-    "arsdk-xml": "git+https://github.com/Parrot-Developers/arsdk-xml",
+    "arsdk-xml": "git://github.com/Parrot-Developers/arsdk-xml",
+    "events": "^1.1.1",
+    "noble": "git://github.com/jacobrosenthal/noble.git#highsierra",
+    "node-gyp": "^3.6.2",
+    "winston": "^2.4.0",
     "xml2js": "^0.4.19"
   },
   "devDependencies": {

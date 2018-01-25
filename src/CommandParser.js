@@ -83,7 +83,7 @@ export default class CommandParser extends Singleton {
       }
     }
 
-    this._commandCache[cacheToken] = new DroneCommand(projectId, classId, commandId, enumId);
+    this._commandCache[cacheToken] = new DroneCommand(projectId, classId, commandId, [enumId]);
 
     return this._commandCache[cacheToken].clone();
   }

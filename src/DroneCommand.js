@@ -1,9 +1,9 @@
 export default class DroneCommand {
-  constructor(projectId, classId, commandId, enumId = null) {
-    this._projectId = +projectId;
-    this._classId = +classId;
-    this._commandId = +commandId;
-    this._enumId = enumId === null ? null : +enumId;
+  constructor(projectId, classId, commandId, arguments = []) {
+    this._projectId = Number(projectId);
+    this._classId = Number(classId);
+    this._commandId = Number(commandId);
+    this._arguments = arguments.map(Number);
   }
 
   get projectId() {
@@ -18,15 +18,24 @@ export default class DroneCommand {
     return this._commandId;
   }
 
-  get enumId() {
-    return this._enumId;
+  get arguments() {
+    return this._arguments;
   }
 
-  get hasEnum() {
-    return ![null, -1].includes(this.enumId);
+  get hasArguments() {
+    return this.arguments.length > 0;
   }
 
   clone() {
-    return new this.constructor(this.projectId, this.classId, this.commandId, this.enumId);
+    return new this.constructor(this.projectId, this.classId, this.commandId, this.arguments);
+  }
+
+  encode() {
+    return [
+      this.projectId,
+      this.classId,
+      this.commandId,
+      ...this.arguments,
+    ]
   }
 }
