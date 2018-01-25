@@ -17,6 +17,7 @@ export default class DroneConnection extends EventEmitter {
     Logger.level = 'debug';
 
     this.noble = require('noble');
+    this.characteristics = [];
 
     // bind noble event handlers
     this.noble.on('stateChange', (state) => this._onNobleStateChange(state));
@@ -63,7 +64,7 @@ export default class DroneConnection extends EventEmitter {
       this._peripheral = peripheral;
 
       // @todo
-      this.setupPeripheral();
+      this._setupPeripheral();
     });
   }
 
@@ -90,9 +91,30 @@ export default class DroneConnection extends EventEmitter {
   }
 
   /**
+   * Sets up a peripheral and finds all of it's services and characteristics
+   * @return {undefined}
+   */
+  setupPeripheral() {
+    this.peripheral.discoverAllServicesAndCharacteristics((err, services, characteristics) => {
+      if (err) {
+        throw err;
+      }
+
+      this.characteristics = characteristics;
+    });
+  }
+
+  /**
    * @returns {Peripheral} a noble peripheral object class
    */
   get peripheral() {
     return this._peripheral;
+  }
+
+  /**
+   * @returns {boolean} If the drone is connected
+   */
+  get connected() {
+    return this.characteristics.length > 0;
   }
 }

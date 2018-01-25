@@ -1,9 +1,9 @@
 export default class DroneCommand {
-  constructor(projectId, classId, commandId, arguments = []) {
+  constructor(projectId, classId, commandId, arguments_ = []) {
     this._projectId = Number(projectId);
     this._classId = Number(classId);
     this._commandId = Number(commandId);
-    this._arguments = arguments.map(Number);
+    this._arguments = arguments_.map(Number);
   }
 
   get projectId() {
