@@ -1,0 +1,55 @@
+{
+  "name": "minidrone-js",
+  "version": "0.0.1",
+  "description": "Parrot Minidrone library",
+  "main": "dist/bundle.min.js",
+  "repository": "https://github.com/Mechazawa/minidrone-js",
+  "author": "Bas <mega@ioexception.at>",
+  "license": "MIT",
+  "dependencies": {
+    "arsdk-xml": "git+https://github.com/Parrot-Developers/arsdk-xml"
+  },
+  "devDependencies": {
+    "ava": "^0.24.0",
+    "babel": "^6.23.0",
+    "babel-core": "6",
+    "babel-eslint": "^8.2.1",
+    "babel-loader": "^7.1.2",
+    "babel-plugin-transform-export-extensions": "^6.22.0",
+    "babel-preset-env": "^1.6.1",
+    "eslint": "^4.16.0",
+    "file-loader": "^1.1.6",
+    "fs-extra": "^5.0.0",
+    "path": "^0.12.7",
+    "webpack": "^3.10.0"
+  },
+  "scripts": {
+    "build": "rm -r dist||true; mkdir dist && webpack",
+    "watch": "rm -r dist||true; mkdir dist && webpack --watch"
+  },
+  "babel": {
+    "presets": [
+      [
+        "env",
+        {
+          "targets": {
+            "browsers": [
+              "> 1%"
+            ]
+          }
+        }
+      ]
+    ],
+    "sourceMap": true,
+    "env": {
+      "production": {
+        "presets": [
+          "@ava/stage-4"
+        ]
+      }
+    },
+    "plugins": [
+      "transform-export-extensions"
+    ]
+  }
+}
