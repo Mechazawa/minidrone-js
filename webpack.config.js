@@ -38,16 +38,9 @@ module.exports = {
         },
       },
       {
-        test: /\.(xml)$/,
-        use: [
-          {
-            loader: 'file-loader',
-            options: {
-              name: 'xml/[name].[ext]',
-            },
-          },
-        ],
-      },
+        test: /\.xml/,
+        use: 'raw-loader'
+      }
     ],
   },
   devtool: 'source-map',
