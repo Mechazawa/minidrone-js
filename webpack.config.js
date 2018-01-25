@@ -9,7 +9,6 @@ const license = fs.readFileSync('LICENSE', 'ascii');
 
 module.exports = {
   target: 'node',
-  externals: [],
   entry: {
     'bundle': './src/index.js',
     'bundle.min': './src/index.js',
@@ -20,6 +19,9 @@ module.exports = {
 
     library: 'minidrone-js',
     libraryTarget: 'umd',
+  },
+  externals: {
+    xml2js: 'xml2js',
   },
   module: {
     rules: [
@@ -41,7 +43,7 @@ module.exports = {
           {
             loader: 'file-loader',
             options: {
-              name: 'xml/[name].[ext]'
+              name: 'xml/[name].[ext]',
             },
           },
         ],
