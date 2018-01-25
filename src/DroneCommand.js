@@ -30,7 +30,7 @@ export default class DroneCommand {
     return new this.constructor(this.projectId, this.classId, this.commandId, this.arguments);
   }
 
-  encode() {
+  toArray() {
     return [
       this.projectId,
       this.classId,

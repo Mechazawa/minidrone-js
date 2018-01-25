@@ -13,15 +13,18 @@ export default class DroneConnection extends EventEmitter {
     };
 
     this.options = Object.assign({}, defaults, options);
+    this.characteristics = [];
 
     Logger.level = 'debug';
 
-    this.noble = require('noble');
-    this.characteristics = [];
+    // Noble returns an instance when you require
+    // it. So we need to prevent webpack from
+    // pre-loading it.
+    this.noble = eval("require('noble')");
 
     // bind noble event handlers
-    this.noble.on('stateChange', (state) => this._onNobleStateChange(state));
-    this.noble.on('discover', (peripheral) => this._onPeripheralDiscovery(peripheral));
+    this.noble.on('stateChange', state => this._onNobleStateChange(state));
+    this.noble.on('discover', peripheral => this._onPeripheralDiscovery(peripheral));
 
     Logger.info('Searching for drones...');
   }
@@ -63,7 +66,6 @@ export default class DroneConnection extends EventEmitter {
       }
       this._peripheral = peripheral;
 
-      // @todo
       this._setupPeripheral();
     });
   }
@@ -94,7 +96,7 @@ export default class DroneConnection extends EventEmitter {
    * Sets up a peripheral and finds all of it's services and characteristics
    * @return {undefined}
    */
-  setupPeripheral() {
+  _setupPeripheral() {
     this.peripheral.discoverAllServicesAndCharacteristics((err, services, characteristics) => {
       if (err) {
         throw err;
