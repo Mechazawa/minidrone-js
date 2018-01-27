@@ -46,7 +46,7 @@ export default class CommandParser extends Singleton {
     };
   }
 
-  getCommand(projectName, className, commandName, enumName = null) {
+  getCommand(projectName, className, commandName) {
     const cacheToken = [
       projectName, className,
       commandName, enumName || '',
@@ -59,7 +59,7 @@ export default class CommandParser extends Singleton {
     const project = this._getXml(projectName).project;
 
     // Values to be extracted
-    let projectId, classId, commandId, enumId = null;
+    let projectId, classId, commandId, description, arguments_ = [];
 
     projectId = project.$.id;
 
@@ -70,20 +70,17 @@ export default class CommandParser extends Singleton {
     const targetCommand = targetClass.cmd.find(v => v.$.name === commandName);
 
     commandId = targetCommand.$.id;
+    description = targetCommand.$._;
 
-    if (enumName !== null) {
-      const argsWithEnum = targetCommand.arg.filter(x => x.$.type === 'enum');
+    for (const arg of argsWithEnum) {
+      enumId = arg.enum.findIndex(v => v.$.name === enumName);
 
-      for (const arg of argsWithEnum) {
-        enumId = arg.enum.findIndex(v => v.$.name === enumName);
-
-        if (enumId !== -1) {
-          break;
-        }
+      if (enumId !== -1) {
+        break;
       }
     }
 
-    this._commandCache[cacheToken] = new DroneCommand(projectId, classId, commandId, [enumId]);
+    this._commandCache[cacheToken] = new DroneCommand(projectId, classId, commandId, description, arguments_);
 
     return this._commandCache[cacheToken].clone();
   }
