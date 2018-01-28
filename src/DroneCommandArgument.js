@@ -58,10 +58,10 @@ export default class DroneCommandArgument {
           return this.enum[value];
         } else if (this.enum.hasValue(value)) {
           return value;
-        // } else if (value === 256) {
-        //   // This is some BS value I sometimes get from the drone
-        //   // Pretty much just means "unavailable"
-        //   return value;
+          // } else if (value === 256) {
+          //   // This is some BS value I sometimes get from the drone
+          //   // Pretty much just means "unavailable"
+          //   return value;
         }
 
         throw new Error(`Value ${value} could not be interpreted as an enum value for ${this.name}. Available options are ${this.enum.toString()}`);
@@ -98,5 +98,15 @@ export default class DroneCommandArgument {
     }
 
     return 0;
+  }
+
+  toString() {
+    if (this.hasEnumProperty) {
+      const valueName = this.enum.findForValue(this.value);
+
+      return `${this.name}="${valueName}"(${this.value})`;
+    }
+
+    return `${this.name}="${this.value}"`;
   }
 }

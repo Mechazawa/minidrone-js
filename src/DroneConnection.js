@@ -26,17 +26,6 @@ const service_uuids = {
   '1800': 'Device Info',
   '1801': 'unknown',
 };
-// the following characteristic UUID segments come from the documentation at
-// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
-// the 4th bytes are used to identify the characteristic
-// the usage of the channels are also documented here
-// http://forum.developer.parrot.com/t/ble-characteristics-of-minidrones/5912/2
-const characteristicSendUuids = new Enum({
-  'SEND_NO_ACK': '0a',     // not-ack commands (PCMD only)
-  'SEND_WITH_ACK': '0b',     // ack commands (all piloting commands)
-  'SEND_HIGH_PRIORITY': '0c',     // emergency commands
-  'ACK_COMMAND': '1e',     // ack for data sent on 0e
-});
 
 // the following characteristic UUID segments come from the documentation at
 // http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
@@ -193,14 +182,6 @@ export default class DroneConnection extends EventEmitter {
     return this.characteristics.length > 0;
   }
 
-  runCommand(cmd) {
-    const buffer = cmd.toBuffer();
-
-    Logger.debug('Sending buffer: ' + buffer);
-
-    this.getCharacteristic();
-  }
-
   getCharacteristic(uuid) {
     uuid = uuid.toLowerCase();
 
@@ -218,8 +199,7 @@ export default class DroneConnection extends EventEmitter {
    * @param {DroneCommand} command
    */
   runCommand(command) {
-    // @todo support different characteristics besides fa0a
-    this.getCharacteristic('fa0a').write(command.toBuffer(), true);
+    this.getCharacteristic(command.sendCharacteristicUuid).write(command.toBuffer(), true);
   }
 
   _handleIncoming(channelUuid, buffer) {
@@ -263,6 +243,7 @@ export default class DroneConnection extends EventEmitter {
       Logger.debug('RECV:', command.toString());
     } catch (e) {
       Logger.warn('Unable to parse packet:', buffer);
+      Logger.warn(e)
     }
   }
 }

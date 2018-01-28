@@ -7,15 +7,16 @@ const parser = new CommandParser();
 console.log(parser)
 
 connection.on('connected', () => {
-  // connection.runCommand(takeoff);
+  connection.runCommand(takeoff);
 
-  setTimeout(() => connection.runCommand(allStates), 1500);
-  // setTimeout(() => connection.runCommand(landing), 5000);
+  setTimeout(() => connection.runCommand(doAFlip), 3000);
+  setTimeout(() => connection.runCommand(landing), 6000);
 });
 
 const takeoff = parser.getCommand('minidrone', 'Piloting', 'TakeOff');
 const landing = parser.getCommand('minidrone', 'Piloting', 'Landing');
-const allStates = parser.getCommand('common', 'Common', 'AllStates');
+console.log(landing.toString())
+const doAFlip = parser.getCommand('minidrone', 'Animations', 'Flip', {direction: 'back'});
 
 // const testData = [
 //   [0x02, 0x0c, 0x02, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04],

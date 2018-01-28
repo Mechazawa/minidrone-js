@@ -1,12 +1,34 @@
 import DroneCommandArgument from './DroneCommandArgument';
 import Enum from './util/Enum';
 
-export const BufferType = new Enum({
-  ACK: 0x01, // Acknowledgment of previously received data
+export const bufferType = new Enum({
+  ACK: 0x02, // Acknowledgment of previously received data
   DATA: 0x02, // Normal data (no ack requested)
   NON_ACK: 0x02, // Same as DATA
+  HIGH_PRIO: 0x02, // Not sure about this one could be LLD
   LOW_LATENCY_DATA: 0x03, // Treated as normal data on the network, but are given higher priority internally
   DATA_WITH_ACK: 0x04, // Data requesting an ack. The receiver must send an ack for this data unit!
+});
+
+const bufferCharTranslationMap = {
+  ACK: 'ACK_COMMAND',
+  DATA: 'SEND_NO_ACK',
+  NON_ACK: 'SEND_NO_ACK',
+  HIGH_PRIO: 'SEND_HIGH_PRIORITY',
+  LOW_LATENCY_DATA: 'SEND_NO_ACK',
+  DATA_WITH_ACK: 'SEND_WITH_ACK',
+};
+
+// the following characteristic UUID segments come from the documentation at
+// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
+// the 4th bytes are used to identify the characteristic
+// the usage of the channels are also documented here
+// http://forum.developer.parrot.com/t/ble-characteristics-of-minidrones/5912/2
+const characteristicSendUuids = new Enum({
+  SEND_NO_ACK: '0a', // not-ack commands (PCMD only)
+  SEND_WITH_ACK: '0b', // ack commands (all piloting commands)
+  SEND_HIGH_PRIORITY: '0c', // emergency commands
+  ACK_COMMAND: '1e', // ack for data sent on 0e
 });
 
 const stepStore = {};
@@ -40,7 +62,9 @@ export default class DroneCommand {
     this._deprecated = command.$.deprecated === 'true';
     this._description = String(command._).trim();
     this._arguments = (command.arg || []).map(x => new DroneCommandArgument(x));
-    this._buffer = command.$.buffer || 'NON_ACK';
+
+    // NON_ACK, ACK or HIGH_PRIO. Defaults to ACK
+    this._buffer = command.$.buffer || 'DATA_WITH_ACK';
 
     this._mapArguments();
   }
@@ -85,6 +109,12 @@ export default class DroneCommand {
     return this._deprecated;
   }
 
+  get sendCharacteristicUuid() {
+    const t = bufferCharTranslationMap[this.bufferType] || 'SEND_WITH_ACK';
+
+    return 'fa' + characteristicSendUuids[t];
+  }
+
   hasArgument(key) {
     return this.arguments.findIndex(x => x.name === key) !== -1;
   }
@@ -118,14 +148,14 @@ export default class DroneCommand {
         case 'u16':
         case 'u32':
         case 'u64':
-          buffer.writeUIntLE(arg.value, bufferOffset, valueSize);
+          buffer.writeUIntLE(Math.floor(arg.value), bufferOffset, valueSize);
           break;
         case 'i8':
         case 'i16':
         case 'i32':
         case 'i64':
         case 'enum':
-          buffer.writeIntLE(arg.value, bufferOffset, valueSize);
+          buffer.writeIntLE(Math.floor(arg.value), bufferOffset, valueSize);
           break;
         case 'string':
           valueSize++;
@@ -150,6 +180,7 @@ export default class DroneCommand {
       const init = {
         enumerable: false,
         get: () => arg,
+        set: v => arg.value = v,
       };
 
       Object.defineProperty(this, arg.name, init);
@@ -158,7 +189,7 @@ export default class DroneCommand {
 
   toString() {
     const str = `${this.projectName} ${this.className} ${this.commandName}`;
-    const argStr = this.arguments.map(x => `${x.name}="${x.value}"`).join(' ').trim();
+    const argStr = this.arguments.map(x => x.toString()).join(' ').trim();
 
     return (str + ' ' + argStr).trim();
   }
@@ -168,6 +199,6 @@ export default class DroneCommand {
   }
 
   get bufferFlag() {
-    return BufferType[this.bufferType];
+    return bufferType[this.bufferType];
   }
 }

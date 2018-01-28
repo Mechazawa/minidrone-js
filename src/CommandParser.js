@@ -75,8 +75,6 @@ export default class CommandParser {
   }
 
   getCommandFromBuffer(buffer) {
-    buffer = buffer.slice(2);
-
     const projectId = buffer.readUInt8(0);
     const classId = buffer.readUInt8(1);
     const commandId = buffer.readUInt8(2);
@@ -115,7 +113,7 @@ export default class CommandParser {
         case 'i32':
         case 'i64':
         case 'enum':
-          value = buffer.readIntLE(bufferOffset, valueSize);
+          value = buffer.readIntLE(bufferOffset + 1, valueSize - 1);
           break;
         case 'string':
           value = '';
