@@ -1,7 +1,7 @@
 import EventEmitter from 'events';
 import Logger from 'winston';
 import Enum from './util/Enum';
-import CommandParser from './util/Singleton';
+import CommandParser from './CommandParser';
 
 const MANUFACTURER_SERIALS = ['4300cf1900090100', '4300cf1909090100', '4300cf1907090100'];
 const DRONE_PREFIXES = ['RS_', 'Mars_', 'Travis_', 'Maclan_', 'Mambo_', 'Blaze_', 'NewZ_'];
@@ -70,6 +70,7 @@ export default class DroneConnection extends EventEmitter {
     // it. So we need to prevent webpack from
     // pre-loading it.
     this.noble = eval('require(\'noble\')');
+    this._parser = new CommandParser();
 
     // bind noble event handlers
     this.noble.on('stateChange', state => this._onNobleStateChange(state));
@@ -249,13 +250,19 @@ export default class DroneConnection extends EventEmitter {
   }
 
   _updateSensors(buffer, ack) {
-    const command = CommandParser.getInstance().getCommandFromBuffer(buffer);
-    const sensorToken = [command.projectName, command.className, command.commandName].join('-');
+    if (buffer[0] === 0) {
+      return;
+    }
 
-    this._sensorStore[sensorToken] = command;
+    try {
+      const command = this._parser.getCommandFromBuffer(buffer);
+      const sensorToken = [command.projectName, command.className, command.commandName].join('-');
 
+      this._sensorStore[sensorToken] = command;
 
-
-    Logger.debug('RECV:', command.toString());
+      Logger.debug('RECV:', command.toString());
+    } catch (e) {
+      Logger.warn('Unable to parse packet:', buffer);
+    }
   }
 }

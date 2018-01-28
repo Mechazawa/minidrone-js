@@ -9,8 +9,4 @@ export default class Singleton {
 
     return this.constructor.instance;
   }
-
-  static getInstance() {
-    return new this();
-  }
 }

@@ -1,21 +1,12 @@
-import Singleton from './util/Singleton';
 import {parseString} from 'xml2js';
 import DroneCommand from './DroneCommand';
 import Logger from 'winston';
 
-export default class CommandParser extends Singleton {
-  constructor() {
-    super();
 
-    if (typeof this._fileCache === 'undefined') {
-      this._fileCache = {};
-    }
+const _fileCache = {};
+const _commandCache = {};
 
-    if (typeof this._commandCache === 'undefined') {
-      this._commandCache = {};
-    }
-  }
-
+export default class CommandParser {
   _getXml(name) {
     const file = CommandParser._fileMapping[name];
 
@@ -23,20 +14,20 @@ export default class CommandParser extends Singleton {
       throw new Error(`Xml file ${name} could not be found`);
     }
 
-    if (typeof this._fileCache[name] === 'undefined') {
-      this._fileCache[name] = null;
+    if (typeof _fileCache[name] === 'undefined') {
+      _fileCache[name] = null;
 
       parseString(file, {async: false}, (e, result) => {
-        this._fileCache[name] = result;
+        _fileCache[name] = result;
       });
 
       return this._getXml(name);
-    } else if (this._fileCache[name] === null) {
+    } else if (_fileCache[name] === null) {
       // Fuck javascript async hipster shit
       return this._getXml(name);
     }
 
-    return this._fileCache[name];
+    return _fileCache[name];
   }
 
   static get _fileMapping() {
@@ -56,8 +47,8 @@ export default class CommandParser extends Singleton {
       commandName,
     ].join('-');
 
-    if (typeof this._commandCache[cacheToken] !== 'undefined') {
-      return this._commandCache[cacheToken].clone();
+    if (typeof _commandCache[cacheToken] !== 'undefined') {
+      return _commandCache[cacheToken].clone();
     }
 
     const project = this._getXml(projectName).project;
@@ -68,34 +59,37 @@ export default class CommandParser extends Singleton {
 
     const result = new DroneCommand(project, targetClass, targetCommand);
 
-    this._commandCache[cacheToken] = result;
+    _commandCache[cacheToken] = result;
 
     if (targetCommand.$.deprecated === 'true') {
       Logger.warn(`${result.toString()} has been deprecated`);
     }
 
-    return this._commandCache[cacheToken].clone();
+    return _commandCache[cacheToken].clone();
   }
 
   getCommandFromBuffer(buffer) {
     buffer = buffer.slice(2);
 
-    const [projectId, classId, commandId] = buffer;
+    const projectId = buffer.readUInt8(0);
+    const classId = buffer.readUInt8(1);
+    const commandId = buffer.readUInt8(2);
+
     const cacheToken = [projectId, classId, commandId].join('-');
 
-    if (typeof this._commandCache[cacheToken] === 'undefined') {
+    if (typeof _commandCache[cacheToken] === 'undefined') {
       const project = CommandParser._files
-        .map(x => CommandParser.getInstance()._getXml(x).project)
+        .map(x => this._getXml(x).project)
         .find(x => Number(x.$.id) === projectId);
 
       const targetClass = project.class.find(x => Number(x.$.id) === classId);
 
       const targetCommand = targetClass.cmd.find(x => Number(x.$.id) === commandId);
 
-      this._commandCache[cacheToken] = new DroneCommand(project, targetClass, targetCommand);
+      _commandCache[cacheToken] = new DroneCommand(project, targetClass, targetCommand);
     }
 
-    const command = this._commandCache[cacheToken].clone();
+    const command = _commandCache[cacheToken].clone();
 
     let bufferOffset = 3;
 
