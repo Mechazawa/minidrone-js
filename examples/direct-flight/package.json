@@ -1,0 +1,7 @@
+{
+  "name": "direct-flight",
+  "main": "index.js",
+  "dependencies": {
+    "xbox-controller": "^0.7.0"
+  }
+}
