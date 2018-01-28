@@ -37,6 +37,7 @@ export default class DroneCommand {
     this._commandId = Number(command.$.id);
     this._commandName = String(command.$.name);
 
+    this._deprecated = command.$.deprecated === 'true';
     this._description = String(command._).trim();
     this._arguments = (command.arg || []).map(x => new DroneCommandArgument(x));
     this._buffer = command.$.buffer || 'NON_ACK';
@@ -78,6 +79,14 @@ export default class DroneCommand {
 
   get description() {
     return this._description;
+  }
+
+  get deprecated() {
+    return this._deprecated;
+  }
+
+  hasArgument(key) {
+    return this.arguments.findIndex(x => x.name === key) !== -1;
   }
 
   clone() {

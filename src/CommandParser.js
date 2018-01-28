@@ -41,31 +41,37 @@ export default class CommandParser {
     return Object.keys(CommandParser._fileMapping);
   }
 
-  getCommand(projectName, className, commandName) {
+  getCommand(projectName, className, commandName, commandArguments = {}) {
     const cacheToken = [
       projectName, className,
       commandName,
     ].join('-');
 
-    if (typeof _commandCache[cacheToken] !== 'undefined') {
-      return _commandCache[cacheToken].clone();
+    if (typeof _commandCache[cacheToken] === 'undefined') {
+      const project = this._getXml(projectName).project;
+
+      const targetClass = project.class.find(v => v.$.name === className);
+
+      const targetCommand = targetClass.cmd.find(v => v.$.name === commandName);
+
+      const result = new DroneCommand(project, targetClass, targetCommand);
+
+      _commandCache[cacheToken] = result;
+
+      if (result.deprecated === 'true') {
+        Logger.warn(`${result.toString()} has been deprecated`);
+      }
     }
 
-    const project = this._getXml(projectName).project;
+    const target = _commandCache[cacheToken].clone();
 
-    const targetClass = project.class.find(v => v.$.name === className);
-
-    const targetCommand = targetClass.cmd.find(v => v.$.name === commandName);
-
-    const result = new DroneCommand(project, targetClass, targetCommand);
-
-    _commandCache[cacheToken] = result;
-
-    if (targetCommand.$.deprecated === 'true') {
-      Logger.warn(`${result.toString()} has been deprecated`);
+    for(const arg of Object.keys(commandArguments)) {
+      if (target.hasArgument(arg)) {
+        target[arg] = commandArguments[arg];
+      }
     }
 
-    return _commandCache[cacheToken].clone();
+    return target;
   }
 
   getCommandFromBuffer(buffer) {
