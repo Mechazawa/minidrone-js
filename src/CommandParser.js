@@ -1,7 +1,7 @@
 import Singleton from './util/Singleton';
 import {parseString} from 'xml2js';
 import DroneCommand from './DroneCommand';
-
+import Logger from 'winston';
 
 export default class CommandParser extends Singleton {
   constructor() {
@@ -46,10 +46,14 @@ export default class CommandParser extends Singleton {
     };
   }
 
+  static get _files() {
+    return Object.keys(CommandParser._fileMapping);
+  }
+
   getCommand(projectName, className, commandName) {
     const cacheToken = [
       projectName, className,
-      commandName, enumName || '',
+      commandName,
     ].join('-');
 
     if (typeof this._commandCache[cacheToken] !== 'undefined') {
@@ -58,37 +62,89 @@ export default class CommandParser extends Singleton {
 
     const project = this._getXml(projectName).project;
 
-    // Values to be extracted
-    let projectId, classId, commandId, description, arguments_ = [];
-
-    projectId = project.$.id;
-
     const targetClass = project.class.find(v => v.$.name === className);
-
-    classId = targetClass.$.id;
 
     const targetCommand = targetClass.cmd.find(v => v.$.name === commandName);
 
-    commandId = targetCommand.$.id;
-    description = targetCommand.$._;
+    const result = new DroneCommand(project, targetClass, targetCommand);
 
-    for (const arg of argsWithEnum) {
-      enumId = arg.enum.findIndex(v => v.$.name === enumName);
+    this._commandCache[cacheToken] = result;
 
-      if (enumId !== -1) {
-        break;
-      }
+    if (targetCommand.$.deprecated === 'true') {
+      Logger.warn(`${result.toString()} has been deprecated`);
     }
-
-    this._commandCache[cacheToken] = new DroneCommand(projectId, classId, commandId, description, arguments_);
 
     return this._commandCache[cacheToken].clone();
   }
 
-  warmup() {
-    const names = CommandParser._fileMapping.keys();
+  getCommandFromBuffer(buffer) {
+    buffer = buffer.slice(2);
 
-    for (const name in names) {
+    const [projectId, classId, commandId] = buffer;
+    const cacheToken = [projectId, classId, commandId].join('-');
+
+    if (typeof this._commandCache[cacheToken] === 'undefined') {
+      const project = CommandParser._files
+        .map(x => CommandParser.getInstance()._getXml(x).project)
+        .find(x => Number(x.$.id) === projectId);
+
+      const targetClass = project.class.find(x => Number(x.$.id) === classId);
+
+      const targetCommand = targetClass.cmd.find(x => Number(x.$.id) === commandId);
+
+      this._commandCache[cacheToken] = new DroneCommand(project, targetClass, targetCommand);
+    }
+
+    const command = this._commandCache[cacheToken].clone();
+
+    let bufferOffset = 3;
+
+    for (const arg of command.arguments) {
+      let valueSize = arg.getValueSize();
+      let value = 0;
+
+      switch (arg.type) {
+        case 'u8':
+        case 'u16':
+        case 'u32':
+        case 'u64':
+          value = buffer.readUIntLE(bufferOffset, valueSize);
+          break;
+        case 'i8':
+        case 'i16':
+        case 'i32':
+        case 'i64':
+        case 'enum':
+          value = buffer.readIntLE(bufferOffset, valueSize);
+          break;
+        case 'string':
+          value = '';
+          let c = ''; // Last character
+
+          for (valueSize = 0; valueSize < buffer.length && c !== '\0'; valueSize++) {
+            c = String.fromCharCode(buffer[bufferOffset]);
+
+            value += c;
+          }
+          break;
+        case 'float':
+          value = buffer.readFloatLE(bufferOffset);
+          break;
+        case 'double':
+          value = buffer.readDoubleLE(bufferOffset);
+          break;
+      }
+
+      arg.value = value;
+
+      bufferOffset += valueSize;
+    }
+
+    return command;
+  }
+
+  warmup() {
+    for (const name in CommandParser._files) {
       this._getXml(name);
     }
   }
