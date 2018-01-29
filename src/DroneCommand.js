@@ -158,15 +158,14 @@ export default class DroneCommand {
           buffer.writeIntLE(Math.floor(arg.value), bufferOffset, valueSize);
           break;
         case 'string':
-          valueSize++;
-          buffer.write(arg.value + '\0', bufferOffset, valueSize, 'ascii');
+          buffer.write(arg.value, bufferOffset, valueSize, 'ascii');
           break;
         case 'float':
           buffer.writeFloatLE(arg.value, bufferOffset);
           break;
         case 'double':
           buffer.writeDoubleLE(arg.value, bufferOffset);
-          break;
+          break
       }
 
       bufferOffset += valueSize;

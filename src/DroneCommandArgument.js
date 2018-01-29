@@ -40,7 +40,11 @@ export default class DroneCommandArgument {
   }
 
   get value() {
-    return this._value;
+    if (!this._value.endsWith('\0')) {
+      return this._value.length + '\0';
+    }
+
+    return this._value.length;
   }
 
   get hasEnumProperty() {

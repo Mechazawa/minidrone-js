@@ -199,6 +199,7 @@ export default class DroneConnection extends EventEmitter {
    * @param {DroneCommand} command
    */
   runCommand(command) {
+    Logger.debug('SEND: ', command.toString());
     this.getCharacteristic(command.sendCharacteristicUuid).write(command.toBuffer(), true);
   }
 
