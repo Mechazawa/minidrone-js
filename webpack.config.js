@@ -24,6 +24,8 @@ module.exports = {
     xml2js: 'xml2js',
     events: 'events',
     winston: 'winston',
+    'case': 'case',
+    noble: 'noble',
   },
   module: {
     rules: [
