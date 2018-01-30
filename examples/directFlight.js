@@ -1,6 +1,5 @@
 const dualShock = require('dualshock-controller');
-require('winston').level = 'debug';
-const {DroneConnection, CommandParser} = require('../../dist/bundle');
+const {DroneConnection, CommandParser} = require('../dist/bundle');
 
 const controller = dualShock({config: 'dualShock4-alternate-driver'});
 const parser = new CommandParser();
