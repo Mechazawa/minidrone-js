@@ -247,4 +247,12 @@ export default class DroneConnection extends EventEmitter {
       Logger.warn(e)
     }
   }
+
+  get logLevel() {
+    return Logger.level;
+  }
+
+  set logLevel(value) {
+    Logger.level = typeof value === 'number' ? value : value.toString();
+  }
 }

@@ -12,6 +12,7 @@
     "events": "^1.1.1",
     "noble": "git://github.com/jacobrosenthal/noble.git#highsierra",
     "node-gyp": "^3.6.2",
+    "source-map-support": "^0.5.3",
     "winston": "^2.4.0",
     "xml2js": "^0.4.19"
   },

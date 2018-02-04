@@ -2,6 +2,27 @@ import {parseString} from 'xml2js';
 import DroneCommand from './DroneCommand';
 import Logger from 'winston';
 
+function assertElementExists(value, type, target, context = []) {
+  if (typeof value === 'undefined') {
+    const encodeTarget = x => typeof x === 'number' ? x.toString(16) : x;
+
+    let message;
+
+    if (typeof target === 'number') {
+      message = 'with the value ' + target.toString(16);
+    } else {
+      message = `called "${target}"`;
+    }
+
+    message = `Can't find ${type} ${message}`;
+
+    if (context.length > 0) {
+      message += ' (' + context.join(', ') + ')';
+    }
+
+    throw new Error(message);
+  }
+}
 
 const _fileCache = {};
 const _commandCache = {};
@@ -50,9 +71,19 @@ export default class CommandParser {
     if (typeof _commandCache[cacheToken] === 'undefined') {
       const project = this._getXml(projectName).project;
 
+      assertElementExists(project, 'project', projectName);
+
+      const context = [projectName];
+
       const targetClass = project.class.find(v => v.$.name === className);
 
+      assertElementExists(targetClass, 'class', className);
+
+      context.push(className);
+
       const targetCommand = targetClass.cmd.find(v => v.$.name === commandName);
+
+      assertElementExists(targetCommand, 'command', commandName);
 
       const result = new DroneCommand(project, targetClass, targetCommand);
 
@@ -65,7 +96,7 @@ export default class CommandParser {
 
     const target = _commandCache[cacheToken].clone();
 
-    for(const arg of Object.keys(commandArguments)) {
+    for (const arg of Object.keys(commandArguments)) {
       if (target.hasArgument(arg)) {
         target[arg] = commandArguments[arg];
       }
@@ -86,9 +117,19 @@ export default class CommandParser {
         .map(x => this._getXml(x).project)
         .find(x => Number(x.$.id) === projectId);
 
+      assertElementExists(project, 'project', projectId);
+
       const targetClass = project.class.find(x => Number(x.$.id) === classId);
 
+      const context = [project.$.name];
+
+      assertElementExists(targetClass, 'class', classId, context);
+
       const targetCommand = targetClass.cmd.find(x => Number(x.$.id) === commandId);
+
+      context.push(targetClass.$.name);
+
+      assertElementExists(targetCommand, 'command', commandId, context);
 
       _commandCache[cacheToken] = new DroneCommand(project, targetClass, targetCommand);
     }

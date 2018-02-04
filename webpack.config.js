@@ -26,6 +26,7 @@ module.exports = {
     winston: 'winston',
     'case': 'case',
     noble: 'noble',
+    'source-map-support': 'source-map-support',
   },
   module: {
     rules: [
@@ -43,8 +44,8 @@ module.exports = {
       },
       {
         test: /\.xml/,
-        use: 'raw-loader'
-      }
+        use: 'raw-loader',
+      },
     ],
   },
   devtool: 'source-map',
