@@ -42,6 +42,8 @@ export default class DroneCommandArgument {
   get value() {
     if (this.type === 'string' && !this._value.endsWith('\0')) {
       return this._value + '\0';
+    } else if (this.type === 'float') {
+      return Math.fround(this._value);
     }
 
     return this._value;
@@ -108,13 +110,21 @@ export default class DroneCommandArgument {
     return 0;
   }
 
-  toString() {
+  toString(debug = false) {
     if (this.hasEnumProperty) {
       const valueName = this.enum.findForValue(this.value);
 
       return `${this.name}="${valueName}"(${this.value})`;
     }
 
-    return `${this.name}="${this.value}"`;
+    const precision = 3;
+    const value = Math.round(this.value * (precision * 10)) / (precision * 10);
+    const message = `${this.name}="${value}"`;
+
+    if (!debug) {
+      return message;
+    }
+
+    return `${message}(${this.type})`;
   }
 }

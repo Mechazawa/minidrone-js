@@ -112,6 +112,11 @@ export default class Enum {
     return this.keys()[index];
   }
 
+  /**
+   * Auto incrementing integer
+   * @returns {number} - enum value
+   * @private
+   */
   static get _iota() {
     if (!Enum.__iota) {
       Enum.__iota = 0;
@@ -120,6 +125,10 @@ export default class Enum {
     return Enum.__iota++;
   }
 
+  /**
+   * Get a string representation of the enum
+   * @returns {string}
+   */
   toString() {
     return this.keys().map(key => key + '=' + this[key]).join(', ');
   }

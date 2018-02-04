@@ -1,33 +1,23 @@
 import {parseString} from 'xml2js';
 import DroneCommand from './DroneCommand';
 import Logger from 'winston';
+import InvalidCommandError from './InvalidCommandError';
 
-function assertElementExists(value, type, target, context = []) {
-  if (typeof value === 'undefined') {
-    const encodeTarget = x => typeof x === 'number' ? x.toString(16) : x;
 
-    let message;
-
-    if (typeof target === 'number') {
-      message = 'with the value ' + target.toString(16);
-    } else {
-      message = `called "${target}"`;
-    }
-
-    message = `Can't find ${type} ${message}`;
-
-    if (context.length > 0) {
-      message += ' (' + context.join(', ') + ')';
-    }
-
-    throw new Error(message);
-  }
-}
 
 const _fileCache = {};
 const _commandCache = {};
 
+/**
+ * Command parser used for looking up commands in the xml definition
+ */
 export default class CommandParser {
+  /**
+   * Get an xml file and convert it to json
+   * @param {string} name - project name
+   * @returns {Object}
+   * @private
+   */
   _getXml(name) {
     const file = CommandParser._fileMapping[name];
 
@@ -51,6 +41,11 @@ export default class CommandParser {
     return _fileCache[name];
   }
 
+  /**
+   * Used for file loading/lookup
+   * @returns {{minidrone: string, common: string}} - xml files with contents
+   * @private
+   */
   static get _fileMapping() {
     return {
       minidrone: require('arsdk-xml/xml/minidrone.xml'),
@@ -58,10 +53,28 @@ export default class CommandParser {
     };
   }
 
+  /**
+   * Get a list of available files
+   * @returns {string[]} - Available files
+   * @private
+   */
   static get _files() {
     return Object.keys(CommandParser._fileMapping);
   }
 
+  /**
+   * Get a command based on it's path in the xml definition
+   * @param {string} projectName - The xml file name (project name)
+   * @param {string} className - The command class name
+   * @param {string} commandName - The command name
+   * @param {Object?} commandArguments - Optional command arguments
+   * @returns {DroneCommand} - Target command
+   * @throws InvalidCommandError
+   * @see {@link https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/}
+   * @example
+   * const parser = new CommandParser();
+   * const backFlip = parser.getCommand('minidrone', 'Animations', 'Flip', {direction: 'back'});
+   */
   getCommand(projectName, className, commandName, commandArguments = {}) {
     const cacheToken = [
       projectName, className,
@@ -71,25 +84,25 @@ export default class CommandParser {
     if (typeof _commandCache[cacheToken] === 'undefined') {
       const project = this._getXml(projectName).project;
 
-      assertElementExists(project, 'project', projectName);
+      this._assertElementExists(project, 'project', projectName);
 
       const context = [projectName];
 
       const targetClass = project.class.find(v => v.$.name === className);
 
-      assertElementExists(targetClass, 'class', className);
+      this._assertElementExists(targetClass, 'class', className);
 
       context.push(className);
 
       const targetCommand = targetClass.cmd.find(v => v.$.name === commandName);
 
-      assertElementExists(targetCommand, 'command', commandName);
+      this._assertElementExists(targetCommand, 'command', commandName);
 
       const result = new DroneCommand(project, targetClass, targetCommand);
 
       _commandCache[cacheToken] = result;
 
-      if (result.deprecated === 'true') {
+      if (result.deprecated) {
         Logger.warn(`${result.toString()} has been deprecated`);
       }
     }
@@ -105,6 +118,13 @@ export default class CommandParser {
     return target;
   }
 
+  /**
+   * Parse the input buffer and get the correct command with parameters
+   * Used internally to parse sensor data
+   * @param {Buffer} buffer - The command buffer without the first two bytes
+   * @returns {DroneCommand} - Parsed drone command
+   * @throws InvalidCommandError
+   */
   getCommandFromBuffer(buffer) {
     const projectId = buffer.readUInt8(0);
     const classId = buffer.readUInt8(1);
@@ -117,19 +137,19 @@ export default class CommandParser {
         .map(x => this._getXml(x).project)
         .find(x => Number(x.$.id) === projectId);
 
-      assertElementExists(project, 'project', projectId);
+      this._assertElementExists(project, 'project', projectId);
 
       const targetClass = project.class.find(x => Number(x.$.id) === classId);
 
       const context = [project.$.name];
 
-      assertElementExists(targetClass, 'class', classId, context);
+      this._assertElementExists(targetClass, 'class', classId, context);
 
       const targetCommand = targetClass.cmd.find(x => Number(x.$.id) === commandId);
 
       context.push(targetClass.$.name);
 
-      assertElementExists(targetCommand, 'command', commandId, context);
+      this._assertElementExists(targetCommand, 'command', commandId, context);
 
       _commandCache[cacheToken] = new DroneCommand(project, targetClass, targetCommand);
     }
@@ -153,7 +173,10 @@ export default class CommandParser {
         case 'i16':
         case 'i32':
         case 'i64':
+          value = buffer.readIntLE(bufferOffset, valueSize);
+          break;
         case 'enum':
+          // @todo figure out why I have to do this
           value = buffer.readIntLE(bufferOffset + 1, valueSize - 1);
           break;
         case 'string':
@@ -167,7 +190,8 @@ export default class CommandParser {
           }
           break;
         case 'float':
-          value = buffer.readFloatLE(bufferOffset);
+          console.debug(buffer.slice(bufferOffset, 4 + bufferOffset));
+          value = buffer.readFloatBE(bufferOffset);
           break;
         case 'double':
           value = buffer.readDoubleLE(bufferOffset);
@@ -182,9 +206,21 @@ export default class CommandParser {
     return command;
   }
 
+  /**
+   * Warn up the parser by pre-fetching the xml files
+   */
   warmup() {
-    for (const name in CommandParser._files) {
-      this._getXml(name);
+    CommandParser._files.forEach(file => this._getXml(file));
+  }
+
+  /**
+   * helper method
+   * @private
+   * @throws InvalidCommandError
+   */
+  _assertElementExists(value, type, target, context = []) {
+    if (typeof value === 'undefined') {
+      throw new InvalidCommandError(value, type, target, context);
     }
   }
 }

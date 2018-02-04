@@ -3,6 +3,7 @@ require('winston').level = 'debug';
 const {CommandParser} = require('./dist/bundle');
 
 const parser = new CommandParser();
+parser.warmup();
 
 const testData = [
   [0x02, 0x0c, 0x02, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04],
@@ -17,6 +18,8 @@ const testData = [
 ];
 
 for (const row of testData) {
-  const command = parser.getCommandFromBuffer(new Buffer(row));
-  console.log(command.toString());
+  const buffer = new Buffer(row.splice(2)); // Remove device id and message counter
+  const command = parser.getCommandFromBuffer(buffer);
+
+  console.log(command.toString(true));
 }

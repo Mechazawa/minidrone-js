@@ -40,20 +40,29 @@ const characteristicReceiveUuids = new Enum({
 });
 
 
+/**
+ * Drone connection class
+ *
+ * Exposes an api for controlling the drone
+ *
+ * @fires DroneCommand#connected
+ * @fires DroneCommand#sensor:
+ */
 export default class DroneConnection extends EventEmitter {
-  constructor(options) {
+  /**
+   * Creates a new DroneConnection instance
+   * @param {string} droneFilter - The drone name leave blank for no filter
+   */
+  constructor(droneFilter = '') {
     super();
 
-    const defaults = {
-      droneFilter: '',
-    };
-
-    this.options = Object.assign({}, defaults, options);
     this.characteristics = [];
 
     this._characteristicLookupCache = {};
     this._commandCallback = {};
     this._sensorStore = {};
+
+    this.droneFilter = droneFilter;
 
     // Noble returns an instance when you require
     // it. So we need to prevent webpack from
@@ -64,9 +73,6 @@ export default class DroneConnection extends EventEmitter {
     // bind noble event handlers
     this.noble.on('stateChange', state => this._onNobleStateChange(state));
     this.noble.on('discover', peripheral => this._onPeripheralDiscovery(peripheral));
-    this.setMaxListeners(30);
-
-    Logger.info('Searching for drones...');
   }
 
   /**
@@ -76,9 +82,10 @@ export default class DroneConnection extends EventEmitter {
    * @private
    */
   _onNobleStateChange(state) {
-    Logger.info(`Noble state change ${state}`);
+    Logger.debug(`Noble state changed to ${state}`);
 
     if (state === 'poweredOn') {
+      Logger.info('Searching for drones...');
       this.noble.startScanning();
     }
   }
@@ -123,7 +130,7 @@ export default class DroneConnection extends EventEmitter {
 
     const localName = peripheral.advertisement.localName;
     const manufacturer = peripheral.advertisement.manufacturerData;
-    const matchesFilter = localName === this.options.droneFilter;
+    const matchesFilter = !this.droneFilter || localName === this.droneFilter;
 
     const localNameMatch = matchesFilter || DRONE_PREFIXES.some((prefix) => localName && localName.indexOf(prefix) >= 0);
     const manufacturerMatch = manufacturer && (MANUFACTURER_SERIALS.indexOf(manufacturer) >= 0);
@@ -164,7 +171,15 @@ export default class DroneConnection extends EventEmitter {
 
       Logger.info(`Device connected ${this.peripheral.advertisement.localName}`);
 
-      setTimeout(() => this.emit('connected'), 200);
+      setTimeout(() => {
+        /**
+         * Drone connected event
+         * You can control the drone once this event has been triggered.
+         *
+         * @event DroneCommand#connected
+         */
+        this.emit('connected');
+      }, 200);
     });
   }
 
@@ -182,13 +197,16 @@ export default class DroneConnection extends EventEmitter {
     return this.characteristics.length > 0;
   }
 
+  /**
+   * Finds a Noble Characteristic class for the given characteristic UUID
+   * @param {String} uuid The characteristics UUID
+   * @return {Characteristic} The Noble Characteristic corresponding to that UUID
+   */
   getCharacteristic(uuid) {
     uuid = uuid.toLowerCase();
 
     if (typeof this._characteristicLookupCache[uuid] === 'undefined') {
-      const target = this.characteristics.find(x => x.uuid.substr(4, 4).toLowerCase() === uuid);
-
-      this._characteristicLookupCache[uuid] = target;
+      this._characteristicLookupCache[uuid] = this.characteristics.find(x => x.uuid.substr(4, 4).toLowerCase() === uuid);
     }
 
     return this._characteristicLookupCache[uuid];
@@ -203,6 +221,12 @@ export default class DroneConnection extends EventEmitter {
     this.getCharacteristic(command.sendCharacteristicUuid).write(command.toBuffer(), true);
   }
 
+  /**
+   * Handles incoming data from the drone
+   * @param {string} channelUuid - The channel uuid
+   * @param {Buffer} buffer - The packet data
+   * @private
+   */
   _handleIncoming(channelUuid, buffer) {
     const channel = characteristicReceiveUuids.findForValue(channelUuid);
 
@@ -230,28 +254,94 @@ export default class DroneConnection extends EventEmitter {
     }
   }
 
-  _updateSensors(buffer, ack) {
+  /**
+   * Update the sensor
+   *
+   * @param {Buffer} buffer - Buffer containing just the command info
+   * @param {boolean} ack - If an acknowledgement for receiving the data should be sent
+   * @private
+   * @fires DroneConnection#sensor:
+   * @todo implement ack
+   */
+  _updateSensors(buffer, ack = false) {
     if (buffer[0] === 0) {
       return;
     }
 
     try {
       const command = this._parser.getCommandFromBuffer(buffer);
-      const sensorToken = [command.projectName, command.className, command.commandName].join('-');
+      const token = [command.projectName, command.className, command.commandName].join('-');
 
-      this._sensorStore[sensorToken] = command;
+      this._sensorStore[token] = command;
 
       Logger.debug('RECV:', command.toString());
+
+      /**
+       * Fires when a new sensor reading has been received
+       *
+       * @event DroneConnection#sensor:
+       * @type {DroneCommand} - The sensor reading
+       * @example
+       * connection.on('sensor:minidrone-UsbAccessoryState-GunState', function(sensor) {
+       *  if (sensor.state === sensor.enum.READY) {
+       *    console.log('The gun is ready to fire!');
+       *  }
+       * });
+       */
+      this.emit('sensor:' + token, command);
     } catch (e) {
       Logger.warn('Unable to parse packet:', buffer);
-      Logger.warn(e)
+      Logger.warn(e);
     }
   }
 
+  /**
+   * Get the most recent sensor reading
+   *
+   * @param {string} project - Project name
+   * @param {string} class_ - Class name
+   * @param {string} command - Command name
+   * @returns {DroneCommand|undefined} - {@link DroneCommand} instance or {@link undefined} if no sensor reading could be found
+   * @see {@link https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/}
+   */
+  getSensor(project, class_, command) {
+    const token = [project, class_, command].join('-');
+
+    return this.getSensorFromToken(token);
+  }
+
+  /**
+   * Get the most recent sensor reading using the sensor token
+   *
+   * @param {string} token - Command token
+   * @returns {DroneCommand|undefined} - {@link DroneCommand} instance or {@link undefined} if no sensor reading could be found
+   * @see {@link https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/}
+   * @see {@link DroneCommand.getToken}
+   */
+  getSensorFromToken(token) {
+    let command = this._sensorStore[token];
+
+    if (command) {
+      command = command.copy();
+    }
+
+    return command;
+  }
+
+  /**
+   * Get the logger level
+   * @returns {string|number} - logger level
+   * @see {@link https://github.com/winstonjs/winston}
+   */
   get logLevel() {
     return Logger.level;
   }
 
+  /**
+   * Set the logger level
+   * @param {string|number} value - logger level
+   * @see {@link https://github.com/winstonjs/winston}
+   */
   set logLevel(value) {
     Logger.level = typeof value === 'number' ? value : value.toString();
   }

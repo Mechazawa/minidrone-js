@@ -186,11 +186,10 @@ export default class DroneCommand {
     }
   }
 
-  toString() {
-    const str = `${this.projectName} ${this.className} ${this.commandName}`;
-    const argStr = this.arguments.map(x => x.toString()).join(' ').trim();
+  toString(debug = false) {
+    const argStr = this.arguments.map(x => x.toString(debug)).join(' ').trim();
 
-    return (str + ' ' + argStr).trim();
+    return (this.getToken() + ' ' + argStr).trim();
   }
 
   get bufferType() {
@@ -199,5 +198,9 @@ export default class DroneCommand {
 
   get bufferFlag() {
     return bufferType[this.bufferType];
+  }
+
+  getToken() {
+    return [this.projectName, this.className, this.commandName].join('-');
   }
 }
