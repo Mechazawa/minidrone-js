@@ -5,8 +5,8 @@ Minidrone-js is an easy to use drone library for the Parrot
 Minidrones. In theory it supports many different Parrot drones 
 besides Minidrones but this is untested. 
 
-This library is loosely based on the work by [fetherston] 
-([npm-parrot-minidrone]) and [amymcgovern] ([pymambo]).
+This library is loosely based on the work by [fetherston] for 
+[npm-parrot-minidrone] and [amymcgovern] for [pymambo].
 
 [amymcgovern]: https://github.com/amymcgovern
 [pymambo]: https://github.com/amymcgovern/pymambo
