@@ -4,7 +4,6 @@ import Logger from 'winston';
 import InvalidCommandError from './InvalidCommandError';
 
 
-
 const _fileCache = {};
 const _commandCache = {};
 

@@ -9,6 +9,9 @@ function d2h(d) {
   return h.length === 1 ? '0' + h : h;
 }
 
+/**
+ * Thrown when an invalid command is requested
+ */
 export default class InvalidCommandError extends Error {
   constructor(value, type, target, context = []) {
     let message;

@@ -1,7 +1,7 @@
 import DroneCommandArgument from './DroneCommandArgument';
 import Enum from './util/Enum';
 
-export const bufferType = new Enum({
+const bufferType = new Enum({
   ACK: 0x02, // Acknowledgment of previously received data
   DATA: 0x02, // Normal data (no ack requested)
   NON_ACK: 0x02, // Same as DATA
@@ -33,6 +33,12 @@ const characteristicSendUuids = new Enum({
 
 const stepStore = {};
 
+/**
+ * used to count the drone command steps
+ * @todo Make this handled by the {@link DroneConnection} class
+ * @param id
+ * @returns {number}
+ */
 function getStep(id) {
   if (typeof stepStore[id] === 'undefined') {
     stepStore[id] = 0;
