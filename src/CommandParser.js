@@ -117,6 +117,43 @@ export default class CommandParser {
     return target;
   }
 
+  _getCommandFromBuffer(buffer) {
+    const projectId = buffer.readUInt8(0);
+    const classId = buffer.readUInt8(1);
+    const commandId = buffer.readUInt8(2);
+
+    const cacheToken = [projectId, classId, commandId].join('-');
+
+    // Build command if needed
+    if (typeof _commandCache[cacheToken] === 'undefined') {
+      // Find project
+      const project = CommandParser._files
+        .map(x => this._getXml(x).project)
+        .find(x => Number(x.$.id) === projectId);
+
+      this._assertElementExists(project, 'project', projectId);
+
+      // find class
+      const targetClass = project.class.find(x => Number(x.$.id) === classId);
+
+      const context = [project.$.name];
+
+      this._assertElementExists(targetClass, 'class', classId, context);
+
+      // find command
+      const targetCommand = targetClass.cmd.find(x => Number(x.$.id) === commandId);
+
+      context.push(targetClass.$.name);
+
+      this._assertElementExists(targetCommand, 'command', commandId, context);
+
+      // Build command and store it
+      _commandCache[cacheToken] = new DroneCommand(project, targetClass, targetCommand);
+    }
+
+    return _commandCache[cacheToken].clone();
+  }
+
   /**
    * Parse the input buffer and get the correct command with parameters
    * Used internally to parse sensor data
@@ -124,36 +161,8 @@ export default class CommandParser {
    * @returns {DroneCommand} - Parsed drone command
    * @throws InvalidCommandError
    */
-  getCommandFromBuffer(buffer) {
-    const projectId = buffer.readUInt8(0);
-    const classId = buffer.readUInt8(1);
-    const commandId = buffer.readUInt8(2);
-
-    const cacheToken = [projectId, classId, commandId].join('-');
-
-    if (typeof _commandCache[cacheToken] === 'undefined') {
-      const project = CommandParser._files
-        .map(x => this._getXml(x).project)
-        .find(x => Number(x.$.id) === projectId);
-
-      this._assertElementExists(project, 'project', projectId);
-
-      const targetClass = project.class.find(x => Number(x.$.id) === classId);
-
-      const context = [project.$.name];
-
-      this._assertElementExists(targetClass, 'class', classId, context);
-
-      const targetCommand = targetClass.cmd.find(x => Number(x.$.id) === commandId);
-
-      context.push(targetClass.$.name);
-
-      this._assertElementExists(targetCommand, 'command', commandId, context);
-
-      _commandCache[cacheToken] = new DroneCommand(project, targetClass, targetCommand);
-    }
-
-    const command = _commandCache[cacheToken].clone();
+  parseBuffer(buffer) {
+    const command = this._getCommandFromBuffer(buffer);
 
     let bufferOffset = 3;
 
