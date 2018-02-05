@@ -85,7 +85,8 @@ export default class DroneCommandArgument {
 
   /**
    * Set the parameter value
-   * @param value {number|string}
+   * @param {number|string} value - Parameter value
+   * @throws TypeError
    */
   set value(value) {
     if (Object.is(value, -0)) {
@@ -105,7 +106,7 @@ export default class DroneCommandArgument {
 
   /**
    * Parses the value before setting it
-   * @param {number|string} value
+   * @param {number|string} value - Target value
    * @returns {number|string}
    * @private
    * @throws TypeError

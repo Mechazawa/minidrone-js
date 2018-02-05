@@ -255,6 +255,7 @@ export default class DroneCommand {
 
   /**
    * Maps the arguments to the class
+   * @returns {void}
    * @private
    */
   _mapArguments() {

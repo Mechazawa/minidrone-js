@@ -86,6 +86,7 @@ export default class Enum {
 
   /**
    * Find if a key exists
+   * @param {string|number|*} name - Enum value name
    * @returns {boolean}
    */
   hasKey(name) {
@@ -94,15 +95,16 @@ export default class Enum {
 
   /**
    * Find if a key exists
+   * @param {string|number|*} value - Enum value
    * @returns {boolean}
    */
-  hasValue(name) {
+  hasValue(value) {
     return this.values().includes(name);
   }
 
   /**
-   * Find for value
-   * @param {*} value
+   * Find key name for value
+   * @param {string|number|*} value - Enum value
    * @returns {string} - name
    */
   findForValue(value) {

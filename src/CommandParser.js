@@ -12,8 +12,8 @@ const _commandCache = {};
 export default class CommandParser {
   /**
    * Get an xml file and convert it to json
-   * @param {string} name - project name
-   * @returns {Object}
+   * @param {string} name - Project name
+   * @returns {Object} - Parsed Xml data using xml2js
    * @private
    */
   _getXml(name) {
@@ -116,6 +116,12 @@ export default class CommandParser {
     return target;
   }
 
+  /**
+   * Gets the command by analysing the buffer
+   * @param {Buffer} buffer - Command buffer without leading 2 bytes
+   * @returns {DroneCommand} - Buffer's related DroneCommand
+   * @private
+   */
   _getCommandFromBuffer(buffer) {
     const projectId = buffer.readUInt8(0);
     const classId = buffer.readUInt8(1);
@@ -218,6 +224,7 @@ export default class CommandParser {
 
   /**
    * Warn up the parser by pre-fetching the xml files
+   * @returns {void}
    */
   warmup() {
     CommandParser._files.forEach(file => this._getXml(file));
@@ -225,8 +232,13 @@ export default class CommandParser {
 
   /**
    * helper method
+   * @param {Object|undefined} value - Xml node value
+   * @param {string} type - Xml node type
+   * @param {string|number} target - Xml node value
+   * @param {Array<Object|undefined>} context - Parser context
    * @private
    * @throws InvalidCommandError
+   * @returns {void}
    */
   _assertElementExists(value, type, target, context = []) {
     if (typeof value === 'undefined') {

@@ -215,7 +215,7 @@ export default class DroneConnection extends EventEmitter {
 
   /**
    * Send a command to the drone and execute it
-   * @param {DroneCommand} command
+   * @param {DroneCommand} command - Command instance to be ran
    */
   runCommand(command) {
     Logger.debug('SEND: ', command.toString());
@@ -357,7 +357,7 @@ export default class DroneConnection extends EventEmitter {
 
   /**
    * used to count the drone command steps
-   * @param {string} id
+   * @param {string} id - Step store id
    * @returns {number}
    */
   _getStep(id) {
