@@ -1,8 +1,7 @@
-import {parseString} from 'xml2js';
+import { parseString } from 'xml2js';
 import DroneCommand from './DroneCommand';
 import Logger from 'winston';
 import InvalidCommandError from './InvalidCommandError';
-
 
 const _fileCache = {};
 const _commandCache = {};
@@ -27,7 +26,7 @@ export default class CommandParser {
     if (typeof _fileCache[name] === 'undefined') {
       _fileCache[name] = null;
 
-      parseString(file, {async: false}, (e, result) => {
+      parseString(file, { async: false }, (e, result) => {
         _fileCache[name] = result;
       });
 
@@ -188,6 +187,7 @@ export default class CommandParser {
           // @todo figure out why I have to do this
           value = buffer.readIntLE(bufferOffset + 1, valueSize - 1);
           break;
+        // eslint-disable-next-line no-case-declarations
         case 'string':
           value = '';
           let c = ''; // Last character

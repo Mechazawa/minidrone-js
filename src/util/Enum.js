@@ -1,5 +1,5 @@
-import {constant as constantCase} from 'case';
-import {getTypeName} from './reflection';
+import { constant as constantCase } from 'case';
+import { getTypeName } from './reflection';
 
 /**
  * Base enum class
@@ -51,7 +51,7 @@ export default class Enum {
       }
     } else {
       for (const key of Object.keys(enums)) {
-        const init = {enumerable: true};
+        const init = { enumerable: true };
 
         if (typeof enums[key] === 'function') {
           init.get = enums[key];

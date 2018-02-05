@@ -5,7 +5,8 @@
  * @private
  */
 function d2h(d) {
-  const h = (+d).toString(16);
+  const h = Number(d).toString(16);
+
   return h.length === 1 ? '0' + h : h;
 }
 

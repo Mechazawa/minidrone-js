@@ -39,7 +39,6 @@ const characteristicReceiveUuids = new Enum({
   'ACK_HIGH_PRIORITY': '1c', // ack 0c channel, SEND_HIGH_PRIORITY
 });
 
-
 /**
  * Drone connection class
  *
@@ -68,6 +67,7 @@ export default class DroneConnection extends EventEmitter {
     // Noble returns an instance when you require
     // it. So we need to prevent webpack from
     // pre-loading it.
+    // eslint-disable-next-line no-eval
     this.noble = eval('require(\'noble\')');
     this._parser = new CommandParser();
 
@@ -236,6 +236,7 @@ export default class DroneConnection extends EventEmitter {
    */
   _handleIncoming(channelUuid, buffer) {
     const channel = characteristicReceiveUuids.findForValue(channelUuid);
+    let callback;
 
     switch (channel) {
       case 'ACK_DRONE_DATA':
@@ -247,7 +248,7 @@ export default class DroneConnection extends EventEmitter {
         break;
       case 'ACK_COMMAND_SENT':
       case 'ACK_HIGH_PRIORITY':
-        const callback = this._commandCallback[channel];
+        callback = this._commandCallback[channel];
 
         delete this._commandCallback[channel];
 

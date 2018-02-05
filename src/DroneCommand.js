@@ -31,26 +31,6 @@ const characteristicSendUuids = new Enum({
   ACK_COMMAND: '1e', // ack for data sent on 0e
 });
 
-const stepStore = {};
-
-/**
- * used to count the drone command steps
- * @todo Make this handled by the {@link DroneConnection} class
- * @param id
- * @returns {number}
- */
-function getStep(id) {
-  if (typeof stepStore[id] === 'undefined') {
-    stepStore[id] = 0;
-  }
-
-  const out = stepStore[id];
-
-  stepStore[id] = (stepStore[id] + 1)&0xFF;
-
-  return out;
-}
-
 /**
  * Drone command
  *
@@ -238,7 +218,7 @@ export default class DroneCommand {
     let bufferOffset = 6;
 
     for (const arg of this.arguments) {
-      let valueSize = arg.getValueSize();
+      const valueSize = arg.getValueSize();
 
       switch (arg.type) {
         case 'u8':
@@ -282,7 +262,9 @@ export default class DroneCommand {
       const init = {
         enumerable: false,
         get: () => arg,
-        set: v => arg.value = v,
+        set: v => {
+          arg.value = v;
+        },
       };
 
       Object.defineProperty(this, arg.name, init);
