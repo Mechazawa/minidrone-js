@@ -1,4 +1,4 @@
-Minidrone-js
+Minidrone-js [![Maintainability](https://api.codeclimate.com/v1/badges/fc937ad532e4160ea2f0/maintainability)](https://codeclimate.com/github/Mechazawa/minidrone-js/maintainability)
 ---------------
 
 Minidrone-js is an easy to use drone library for the Parrot 
@@ -13,14 +13,14 @@ This library is loosely based on the work by [fetherston] for
 [fetherston]: https://github.com/fetherston
 [npm-parrot-minidrone]: https://github.com/fetherston/npm-parrot-minidrone
 
-# Functionality
+## Functionality
 This library is designed to support the two-way command communication 
 protocol used by Parrot drones. It supports receiving sensor updates 
 and sending commands based on the [xml specification]. 
 
 [xml specification]: https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/
 
-# Installation
+## Installation
 
 Using yarn
 
@@ -34,7 +34,7 @@ or using npm
 npm install minidrone-js
 ```
 
-# Example
+## Example
 
 This example will make the drone take-off, do a flip and then land again.
 
@@ -67,7 +67,7 @@ drone.on('connected', () => {
 });
 ```
 
-# License
+## License
 
 MIT License
 
