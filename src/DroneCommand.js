@@ -51,7 +51,32 @@ function getStep(id) {
   return out;
 }
 
+/**
+ * Drone command
+ *
+ * Used for building commands to be sent to the drone. It
+ * is also used for the sensor readings.
+ *
+ * Arguments are automatically mapped on the object. This
+ * means that it is easy to set command arguments. Default
+ * arguments values are 0 or their enum equivalent by default.
+ *
+ * @example
+ * const parser = new CommandParser();
+ * const backFlip = parser.getCommand('minidrone', 'Animations', 'Flip', {direction: 'back'});
+ * const frontFlip = backFlip.clone();
+ *
+ * backFlip.direction = 'front';
+ *
+ * drone.runCommand(backFlip);
+ */
 export default class DroneCommand {
+  /**
+   * Creates a new DroneCommand instance
+   * @param {object} project - Project node from the xml spec
+   * @param {object} class_ - Class node from the xml spec
+   * @param {object} command - Command node from the xml spec
+   */
   constructor(project, class_, command) {
     this._project = project;
     this._projectId = Number(project.$.id);
@@ -75,60 +100,125 @@ export default class DroneCommand {
     this._mapArguments();
   }
 
+  /**
+   * The project id
+   * @returns {number}
+   */
   get projectId() {
     return this._projectId;
   }
 
+  /**
+   * The project name (minidrone, common, etc)
+   * @returns {string}
+   */
   get projectName() {
     return this._projectName;
   }
 
+  /**
+   * The class id
+   * @returns {number}
+   */
   get classId() {
     return this._classId;
   }
 
+  /**
+   * The class name
+   * @returns {string}
+   */
   get className() {
     return this._className;
   }
 
+  /**
+   * The command id
+   * @returns {number}
+   */
   get commandId() {
     return this._commandId;
   }
 
+  /**
+   * The command name
+   * @returns {string}
+   */
   get commandName() {
     return this._commandName;
   }
 
+  /**
+   * Array containing the drone arguments
+   * @returns {DroneCommandArgument[]}
+   */
   get arguments() {
     return this._arguments;
   }
 
-  get hasArguments() {
+  /**
+   * Returns if the command has any arguments
+   * @returns {boolean}
+   */
+  hasArguments() {
     return this.arguments.length > 0;
   }
 
+  /**
+   * Get the argument names. These names are also mapped to the instance
+   * @returns {string[]}
+   */
+  get argumentNames() {
+    return this.arguments.map(x => x.name);
+  }
+
+  /**
+   * Get the command description
+   * @returns {string}
+   */
   get description() {
     return this._description;
   }
 
+  /**
+   * Get if the command has been deprecated
+   * @returns {boolean}
+   */
   get deprecated() {
     return this._deprecated;
   }
 
+  /**
+   * Get the send characteristic uuid based on the buffer type
+   * @returns {string}
+   */
   get sendCharacteristicUuid() {
     const t = bufferCharTranslationMap[this.bufferType] || 'SEND_WITH_ACK';
 
     return 'fa' + characteristicSendUuids[t];
   }
 
+  /**
+   * Checks if the command has a certain argument
+   * @param {string} key - Argument name
+   * @returns {boolean} - If the argument exists
+   */
   hasArgument(key) {
     return this.arguments.findIndex(x => x.name === key) !== -1;
   }
 
+  /**
+   * Clones the instance
+   * @returns {DroneCommand}
+   */
   clone() {
     return new this.constructor(this._project, this._class, this._command);
   }
 
+  /**
+   * Converts the command to it's buffer representation
+   * @returns {Buffer} - Command buffer
+   */
   toBuffer() {
     const bufferLength = 6 + this.arguments.reduce((acc, val) => val.getValueSize() + acc, 0);
     const buffer = new Buffer(bufferLength);
@@ -180,6 +270,10 @@ export default class DroneCommand {
     return buffer;
   }
 
+  /**
+   * Maps the arguments to the class
+   * @private
+   */
   _mapArguments() {
     for (const arg of this.arguments) {
       const init = {
@@ -192,20 +286,42 @@ export default class DroneCommand {
     }
   }
 
+  /**
+   * Returns a string representation of a DroneCommand
+   * @param {boolean} debug - If extra debug information should be shown
+   * @returns {string} - String representation if the instance
+   */
   toString(debug = false) {
     const argStr = this.arguments.map(x => x.toString(debug)).join(' ').trim();
 
     return (this.getToken() + ' ' + argStr).trim();
   }
 
+  /**
+   * Get the command buffer type
+   * @returns {string}
+   */
   get bufferType() {
     return this._buffer.toUpperCase();
   }
 
+  /**
+   * Get the command buffer flag based on it's type
+   * @returns {number}
+   */
   get bufferFlag() {
     return bufferType[this.bufferType];
   }
 
+  /**
+   * Get the token representation of the command. This
+   * is useful for registering sensors for example
+   * @returns {string}
+   * @example
+   * const backFlip = parser.getCommand('minidrone', 'Animations', 'Flip', {direction: 'back'});
+   *
+   * backFlip.getToken() === 'minidrone-Animations-Flip';
+   */
   getToken() {
     return [this.projectName, this.className, this.commandName].join('-');
   }
