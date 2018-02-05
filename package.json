@@ -1,6 +1,6 @@
 {
   "name": "minidrone-js",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Parrot Minidrone library",
   "main": "dist/bundle.min.js",
   "repository": "https://github.com/Mechazawa/minidrone-js",
