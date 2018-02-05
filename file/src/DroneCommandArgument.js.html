@@ -115,6 +115,12 @@ export default class DroneCommandArgument {
       return this._value + &apos;\0&apos;;
     } else if (this.type === &apos;float&apos;) {
       return Math.fround(this._value);
+
+      /**
+       * Javascript uses doubles by default not fixed
+       * precision or decimals. This means that we can
+       * just return the value without rounding it.
+       */
     }
 
     return this._value;
@@ -122,7 +128,8 @@ export default class DroneCommandArgument {
 
   /**
    * Set the parameter value
-   * @param value {number|string}
+   * @param {number|string} value - Parameter value
+   * @throws TypeError
    */
   set value(value) {
     if (Object.is(value, -0)) {
@@ -142,7 +149,7 @@ export default class DroneCommandArgument {
 
   /**
    * Parses the value before setting it
-   * @param {number|string} value
+   * @param {number|string} value - Target value
    * @returns {number|string}
    * @private
    * @throws TypeError
@@ -203,24 +210,46 @@ export default class DroneCommandArgument {
   /**
    * Returns a string representation of the DroneCommandArgument instance
    * @param {boolean} debug - If extra debug info should be shown.
+   * @param {number} precision - Amount of precision for numerical values
    * @returns {string}
    */
-  toString(debug = false) {
-    if (this.hasEnumProperty) {
-      const valueName = this.enum.findForValue(this.value);
+  toString(debug = false, precision = 3) {
+    let value;
 
-      return `${this.name}=&quot;${valueName}&quot;(${this.value})`;
+    switch (this.type) {
+      case &apos;string&apos;:
+        value = this.value;
+
+        while (value.endsWith(&apos;\0&apos;)) {
+          value = value.substring(0, value.length - 1);
+        }
+
+        value = `&quot;${value}&quot;`;
+        break;
+      case &apos;u8&apos;:
+      case &apos;i8&apos;:
+      case &apos;u16&apos;:
+      case &apos;i16&apos;:
+      case &apos;u32&apos;:
+      case &apos;i32&apos;:
+      case &apos;u64&apos;:
+      case &apos;i64&apos;:
+        value = this.value;
+        break;
+      case &apos;float&apos;:
+      case &apos;double&apos;:
+        value = this.value.toFixed(precision);
+        break;
+      case &apos;enum&apos;:
+        value = `&quot;${this.enum.findForValue(this.value)}&quot;[${this.value}]`;
+        break;
     }
-
-    const precision = 3;
-    const value = Math.round(this.value * (precision * 10)) / (precision * 10);
-    const message = `${this.name}=&quot;${value}&quot;`;
 
     if (!debug) {
-      return message;
+      return `${this.name}=${value}`;
     }
 
-    return `${message}(${this.type})`;
+    return `(${this.type})${this.name}=${value}`;
   }
 }
 </code></pre>

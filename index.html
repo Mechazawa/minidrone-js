@@ -40,21 +40,21 @@
 </div>
 </nav>
 
-<div class="content" data-ice="content"><div data-ice="index" class="github-markdown"><h2 id="minidrone-js">Minidrone-js</h2><p>Minidrone-js is an easy to use drone library for the Parrot 
+<div class="content" data-ice="content"><div data-ice="index" class="github-markdown"><h2 id="minidrone-js--a-href--https---badge-fury-io-js-minidrone-js---img-src--https---badge-fury-io-js-minidrone-js-svg--alt------a---a-href--https---codeclimate-com-github-mechazawa-minidrone-js-maintainability---img-src--https---api-codeclimate-com-v1-badges-fc937ad532e4160ea2f0-maintainability--alt------a-">Minidrone-js <a href="https://badge.fury.io/js/minidrone-js"><img src="https://badge.fury.io/js/minidrone-js.svg" alt=""></a> <a href="https://codeclimate.com/github/Mechazawa/minidrone-js/maintainability"><img src="https://api.codeclimate.com/v1/badges/fc937ad532e4160ea2f0/maintainability" alt=""></a></h2><p>Minidrone-js is an easy to use drone library for the Parrot 
 Minidrones. In theory it supports many different Parrot drones 
 besides Minidrones but this is untested. </p>
 <p>This library is loosely based on the work by <a href="https://github.com/fetherston">fetherston</a> for 
 <a href="https://github.com/fetherston/npm-parrot-minidrone">npm-parrot-minidrone</a> and <a href="https://github.com/amymcgovern">amymcgovern</a> for <a href="https://github.com/amymcgovern/pymambo">pymambo</a>.</p>
-<h1 id="functionality">Functionality</h1><p>This library is designed to support the two-way command communication 
+<h2 id="functionality">Functionality</h2><p>This library is designed to support the two-way command communication 
 protocol used by Parrot drones. It supports receiving sensor updates 
 and sending commands based on the <a href="https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/">xml specification</a>. </p>
-<h1 id="installation">Installation</h1><p>Using yarn</p>
+<h2 id="installation">Installation</h2><p>Using yarn</p>
 <pre><code class="lang-bash"><code class="source-code prettyprint">yarn add minidrone-js</code>
 </code></pre>
 <p>or using npm</p>
 <pre><code class="lang-bash"><code class="source-code prettyprint">npm install minidrone-js</code>
 </code></pre>
-<h1 id="example">Example</h1><p>This example will make the drone take-off, do a flip and then land again.</p>
+<h2 id="example">Example</h2><p>This example will make the drone take-off, do a flip and then land again.</p>
 <pre><code class="lang-js"><code class="source-code prettyprint">const {DroneConnection, CommandParser} = require(&apos;minidrone-js&apos;);
 
 const parser = new CommandParser();
@@ -82,7 +82,7 @@ drone.on(&apos;connected&apos;, () =&gt; {
   setTimeout(process.exit, 5000);
 });</code>
 </code></pre>
-<h1 id="license">License</h1><p>MIT License</p>
+<h2 id="license">License</h2><p>MIT License</p>
 <p>Copyright 2018 Mechazawa <a href="mailto:mega@ioexception.at">mega@ioexception.at</a></p>
 <p>Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the &quot;Software&quot;), to deal

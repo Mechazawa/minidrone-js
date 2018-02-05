@@ -336,6 +336,12 @@ window.esdocSearchIndex = [
     "method"
   ],
   [
+    "src/commandparser.js~commandparser#_getcommandfrombuffer",
+    "class/src/CommandParser.js~CommandParser.html#instance-method-_getCommandFromBuffer",
+    "src/CommandParser.js~CommandParser#_getCommandFromBuffer",
+    "method"
+  ],
+  [
     "src/commandparser.js~commandparser#_getxml",
     "class/src/CommandParser.js~CommandParser.html#instance-method-_getXml",
     "src/CommandParser.js~CommandParser#_getXml",
@@ -348,9 +354,9 @@ window.esdocSearchIndex = [
     "method"
   ],
   [
-    "src/commandparser.js~commandparser#getcommandfrombuffer",
-    "class/src/CommandParser.js~CommandParser.html#instance-method-getCommandFromBuffer",
-    "src/CommandParser.js~CommandParser#getCommandFromBuffer",
+    "src/commandparser.js~commandparser#parsebuffer",
+    "class/src/CommandParser.js~CommandParser.html#instance-method-parseBuffer",
+    "src/CommandParser.js~CommandParser#parseBuffer",
     "method"
   ],
   [
@@ -667,13 +673,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/dronecommandargument.js~dronecommandargument#value",
-    "class/src/DroneCommandArgument.js~DroneCommandArgument.html#instance-set-value",
+    "class/src/DroneCommandArgument.js~DroneCommandArgument.html#instance-get-value",
     "src/DroneCommandArgument.js~DroneCommandArgument#value",
     "member"
   ],
   [
     "src/dronecommandargument.js~dronecommandargument#value",
-    "class/src/DroneCommandArgument.js~DroneCommandArgument.html#instance-get-value",
+    "class/src/DroneCommandArgument.js~DroneCommandArgument.html#instance-set-value",
     "src/DroneCommandArgument.js~DroneCommandArgument#value",
     "member"
   ],
@@ -694,6 +700,12 @@ window.esdocSearchIndex = [
     "class/src/DroneConnection.js~DroneConnection.html#instance-member-_commandCallback",
     "src/DroneConnection.js~DroneConnection#_commandCallback",
     "member"
+  ],
+  [
+    "src/droneconnection.js~droneconnection#_getstep",
+    "class/src/DroneConnection.js~DroneConnection.html#instance-method-_getStep",
+    "src/DroneConnection.js~DroneConnection#_getStep",
+    "method"
   ],
   [
     "src/droneconnection.js~droneconnection#_handleincoming",
@@ -736,6 +748,12 @@ window.esdocSearchIndex = [
     "class/src/DroneConnection.js~DroneConnection.html#instance-method-_setupPeripheral",
     "src/DroneConnection.js~DroneConnection#_setupPeripheral",
     "method"
+  ],
+  [
+    "src/droneconnection.js~droneconnection#_stepstore",
+    "class/src/DroneConnection.js~DroneConnection.html#instance-member-_stepStore",
+    "src/DroneConnection.js~DroneConnection#_stepStore",
+    "member"
   ],
   [
     "src/droneconnection.js~droneconnection#_updatesensors",

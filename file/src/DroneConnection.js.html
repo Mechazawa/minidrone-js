@@ -59,7 +59,7 @@ const handshakeUuids = [
 // the following UUID segments come from the Mambo and from the documenation at
 // http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
 // the 3rd and 4th bytes are used to identify the service
-const service_uuids = {
+const serviceUuids = {
   &apos;fa&apos;: &apos;ARCOMMAND_SENDING_SERVICE&apos;,
   &apos;fb&apos;: &apos;ARCOMMAND_RECEIVING_SERVICE&apos;,
   &apos;fc&apos;: &apos;PERFORMANCE_COUNTER_SERVICE&apos;,
@@ -82,7 +82,6 @@ const characteristicReceiveUuids = new Enum({
   &apos;ACK_HIGH_PRIORITY&apos;: &apos;1c&apos;, // ack 0c channel, SEND_HIGH_PRIORITY
 });
 
-
 /**
  * Drone connection class
  *
@@ -104,12 +103,14 @@ export default class DroneConnection extends EventEmitter {
     this._characteristicLookupCache = {};
     this._commandCallback = {};
     this._sensorStore = {};
+    this._stepStore = {};
 
     this.droneFilter = droneFilter;
 
     // Noble returns an instance when you require
     // it. So we need to prevent webpack from
     // pre-loading it.
+    // eslint-disable-next-line no-eval
     this.noble = eval(&apos;require(\&apos;noble\&apos;)&apos;);
     this._parser = new CommandParser();
 
@@ -176,7 +177,7 @@ export default class DroneConnection extends EventEmitter {
     const matchesFilter = !this.droneFilter || localName === this.droneFilter;
 
     const localNameMatch = matchesFilter || DRONE_PREFIXES.some((prefix) =&gt; localName &amp;&amp; localName.indexOf(prefix) &gt;= 0);
-    const manufacturerMatch = manufacturer &amp;&amp; (MANUFACTURER_SERIALS.indexOf(manufacturer) &gt;= 0);
+    const manufacturerMatch = manufacturer &amp;&amp; MANUFACTURER_SERIALS.indexOf(manufacturer) &gt;= 0;
 
     // Is TRUE according to droneFilter or if empty, for EITHER an &quot;RS_&quot; name OR manufacturer code.
     return localNameMatch || manufacturerMatch;
@@ -256,12 +257,18 @@ export default class DroneConnection extends EventEmitter {
   }
 
   /**
-   *
-   * @param {DroneCommand} command
+   * Send a command to the drone and execute it
+   * @param {DroneCommand} command - Command instance to be ran
    */
   runCommand(command) {
     Logger.debug(&apos;SEND: &apos;, command.toString());
-    this.getCharacteristic(command.sendCharacteristicUuid).write(command.toBuffer(), true);
+
+    const buffer = command.toBuffer();
+    const messageId = this._getStep(command.bufferType);
+
+    buffer.writeUInt16LE(messageId, 1);
+
+    this.getCharacteristic(command.sendCharacteristicUuid).write(buffer, true);
   }
 
   /**
@@ -272,6 +279,7 @@ export default class DroneConnection extends EventEmitter {
    */
   _handleIncoming(channelUuid, buffer) {
     const channel = characteristicReceiveUuids.findForValue(channelUuid);
+    let callback;
 
     switch (channel) {
       case &apos;ACK_DRONE_DATA&apos;:
@@ -283,7 +291,8 @@ export default class DroneConnection extends EventEmitter {
         break;
       case &apos;ACK_COMMAND_SENT&apos;:
       case &apos;ACK_HIGH_PRIORITY&apos;:
-        const callback = this._commandCallback[channel];
+        callback = this._commandCallback[channel];
+
         delete this._commandCallback[channel];
 
         if (typeof callback === &apos;function&apos;) {
@@ -312,7 +321,7 @@ export default class DroneConnection extends EventEmitter {
     }
 
     try {
-      const command = this._parser.getCommandFromBuffer(buffer);
+      const command = this._parser.parseBuffer(buffer);
       const token = [command.projectName, command.className, command.commandName].join(&apos;-&apos;);
 
       this._sensorStore[token] = command;
@@ -387,6 +396,23 @@ export default class DroneConnection extends EventEmitter {
    */
   set logLevel(value) {
     Logger.level = typeof value === &apos;number&apos; ? value : value.toString();
+  }
+
+  /**
+   * used to count the drone command steps
+   * @param {string} id - Step store id
+   * @returns {number}
+   */
+  _getStep(id) {
+    if (typeof this._stepStore[id] === &apos;undefined&apos;) {
+      this._stepStore[id] = 0;
+    }
+
+    const out = this._stepStore[id];
+
+    this._stepStore[id] = this._stepStore[id] + 1 &amp; 0xFF;
+
+    return out;
   }
 }
 </code></pre>

@@ -41,11 +41,10 @@
 </nav>
 
 <div class="content" data-ice="content"><h1 data-ice="title">src/CommandParser.js</h1>
-<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">import {parseString} from &apos;xml2js&apos;;
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">import { parseString } from &apos;xml2js&apos;;
 import DroneCommand from &apos;./DroneCommand&apos;;
 import Logger from &apos;winston&apos;;
 import InvalidCommandError from &apos;./InvalidCommandError&apos;;
-
 
 const _fileCache = {};
 const _commandCache = {};
@@ -56,8 +55,8 @@ const _commandCache = {};
 export default class CommandParser {
   /**
    * Get an xml file and convert it to json
-   * @param {string} name - project name
-   * @returns {Object}
+   * @param {string} name - Project name
+   * @returns {Object} - Parsed Xml data using xml2js
    * @private
    */
   _getXml(name) {
@@ -70,7 +69,7 @@ export default class CommandParser {
     if (typeof _fileCache[name] === &apos;undefined&apos;) {
       _fileCache[name] = null;
 
-      parseString(file, {async: false}, (e, result) =&gt; {
+      parseString(file, { async: false }, (e, result) =&gt; {
         _fileCache[name] = result;
       });
 
@@ -161,42 +160,58 @@ export default class CommandParser {
   }
 
   /**
-   * Parse the input buffer and get the correct command with parameters
-   * Used internally to parse sensor data
-   * @param {Buffer} buffer - The command buffer without the first two bytes
-   * @returns {DroneCommand} - Parsed drone command
-   * @throws InvalidCommandError
+   * Gets the command by analysing the buffer
+   * @param {Buffer} buffer - Command buffer without leading 2 bytes
+   * @returns {DroneCommand} - Buffer&apos;s related DroneCommand
+   * @private
    */
-  getCommandFromBuffer(buffer) {
+  _getCommandFromBuffer(buffer) {
     const projectId = buffer.readUInt8(0);
     const classId = buffer.readUInt8(1);
     const commandId = buffer.readUInt8(2);
 
     const cacheToken = [projectId, classId, commandId].join(&apos;-&apos;);
 
+    // Build command if needed
     if (typeof _commandCache[cacheToken] === &apos;undefined&apos;) {
+      // Find project
       const project = CommandParser._files
         .map(x =&gt; this._getXml(x).project)
         .find(x =&gt; Number(x.$.id) === projectId);
 
       this._assertElementExists(project, &apos;project&apos;, projectId);
 
+      // find class
       const targetClass = project.class.find(x =&gt; Number(x.$.id) === classId);
 
       const context = [project.$.name];
 
       this._assertElementExists(targetClass, &apos;class&apos;, classId, context);
 
+      // find command
       const targetCommand = targetClass.cmd.find(x =&gt; Number(x.$.id) === commandId);
 
       context.push(targetClass.$.name);
 
       this._assertElementExists(targetCommand, &apos;command&apos;, commandId, context);
 
+      // Build command and store it
       _commandCache[cacheToken] = new DroneCommand(project, targetClass, targetCommand);
     }
 
-    const command = _commandCache[cacheToken].clone();
+    return _commandCache[cacheToken].clone();
+  }
+
+  /**
+   * Parse the input buffer and get the correct command with parameters
+   * Used internally to parse sensor data
+   * @param {Buffer} buffer - The command buffer without the first two bytes
+   * @returns {DroneCommand} - Parsed drone command
+   * @throws InvalidCommandError
+   * @throws TypeError
+   */
+  parseBuffer(buffer) {
+    const command = this._getCommandFromBuffer(buffer);
 
     let bufferOffset = 3;
 
@@ -221,6 +236,7 @@ export default class CommandParser {
           // @todo figure out why I have to do this
           value = buffer.readIntLE(bufferOffset + 1, valueSize - 1);
           break;
+        // eslint-disable-next-line no-case-declarations
         case &apos;string&apos;:
           value = &apos;&apos;;
           let c = &apos;&apos;; // Last character
@@ -232,12 +248,13 @@ export default class CommandParser {
           }
           break;
         case &apos;float&apos;:
-          console.debug(buffer.slice(bufferOffset, 4 + bufferOffset));
           value = buffer.readFloatBE(bufferOffset);
           break;
         case &apos;double&apos;:
           value = buffer.readDoubleLE(bufferOffset);
           break;
+        default:
+          throw new TypeError(`Can&apos;t parse buffer: unknown data type &quot;${arg.type}&quot; for argument &quot;${arg.name}&quot; in ${command.getToken()}`);
       }
 
       arg.value = value;
@@ -250,6 +267,7 @@ export default class CommandParser {
 
   /**
    * Warn up the parser by pre-fetching the xml files
+   * @returns {void}
    */
   warmup() {
     CommandParser._files.forEach(file =&gt; this._getXml(file));
@@ -257,8 +275,13 @@ export default class CommandParser {
 
   /**
    * helper method
+   * @param {Object|undefined} value - Xml node value
+   * @param {string} type - Xml node type
+   * @param {string|number} target - Xml node value
+   * @param {Array&lt;Object|undefined&gt;} context - Parser context
    * @private
    * @throws InvalidCommandError
+   * @returns {void}
    */
   _assertElementExists(value, type, target, context = []) {
     if (typeof value === &apos;undefined&apos;) {

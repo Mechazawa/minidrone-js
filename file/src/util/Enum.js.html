@@ -41,9 +41,8 @@
 </nav>
 
 <div class="content" data-ice="content"><h1 data-ice="title">src/util/Enum.js</h1>
-<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">import {constant as constantCase} from &apos;case&apos;;
-import {getTypeName} from &apos;./reflection&apos;;
-
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">import { constant as constantCase } from &apos;case&apos;;
+import { getTypeName } from &apos;./reflection&apos;;
 
 /**
  * Base enum class
@@ -95,7 +94,7 @@ export default class Enum {
       }
     } else {
       for (const key of Object.keys(enums)) {
-        const init = {enumerable: true};
+        const init = { enumerable: true };
 
         if (typeof enums[key] === &apos;function&apos;) {
           init.get = enums[key];
@@ -130,6 +129,7 @@ export default class Enum {
 
   /**
    * Find if a key exists
+   * @param {string|number|*} name - Enum value name
    * @returns {boolean}
    */
   hasKey(name) {
@@ -138,15 +138,16 @@ export default class Enum {
 
   /**
    * Find if a key exists
+   * @param {string|number|*} value - Enum value
    * @returns {boolean}
    */
-  hasValue(name) {
+  hasValue(value) {
     return this.values().includes(name);
   }
 
   /**
-   * Find for value
-   * @param {*} value
+   * Find key name for value
+   * @param {string|number|*} value - Enum value
    * @returns {string} - name
    */
   findForValue(value) {

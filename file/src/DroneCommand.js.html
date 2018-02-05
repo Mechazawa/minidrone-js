@@ -74,26 +74,6 @@ const characteristicSendUuids = new Enum({
   ACK_COMMAND: &apos;1e&apos;, // ack for data sent on 0e
 });
 
-const stepStore = {};
-
-/**
- * used to count the drone command steps
- * @todo Make this handled by the {@link DroneConnection} class
- * @param id
- * @returns {number}
- */
-function getStep(id) {
-  if (typeof stepStore[id] === &apos;undefined&apos;) {
-    stepStore[id] = 0;
-  }
-
-  const out = stepStore[id];
-
-  stepStore[id] = (stepStore[id] + 1)&amp;0xFF;
-
-  return out;
-}
-
 /**
  * Drone command
  *
@@ -262,17 +242,17 @@ export default class DroneCommand {
    * Converts the command to it&apos;s buffer representation
    * @returns {Buffer} - Command buffer
    * @todo don&apos;t fill in message id but use the first byte of the buffer to look up the current step in the connection handler
+   * @throws TypeError
    */
   toBuffer() {
     const bufferLength = 6 + this.arguments.reduce((acc, val) =&gt; val.getValueSize() + acc, 0);
     const buffer = new Buffer(bufferLength);
 
-    const messageId = getStep(this.bufferType);
-
     buffer.fill(0);
 
     buffer.writeUInt16LE(this.bufferFlag, 0);
-    buffer.writeUInt16LE(messageId, 1);
+
+    // Skip command counter (offset 1) because it&apos;s set in DroneConnection::runCommand
 
     buffer.writeUInt16LE(this.projectId, 2);
     buffer.writeUInt16LE(this.classId, 3);
@@ -281,7 +261,7 @@ export default class DroneCommand {
     let bufferOffset = 6;
 
     for (const arg of this.arguments) {
-      let valueSize = arg.getValueSize();
+      const valueSize = arg.getValueSize();
 
       switch (arg.type) {
         case &apos;u8&apos;:
@@ -305,7 +285,9 @@ export default class DroneCommand {
           break;
         case &apos;double&apos;:
           buffer.writeDoubleLE(arg.value, bufferOffset);
-          break
+          break;
+        default:
+          throw new TypeError(`Can&apos;t encode buffer: unknown data type &quot;${arg.type}&quot; for argument &quot;${arg.name}&quot; in ${this.getToken()}`);
       }
 
       bufferOffset += valueSize;
@@ -316,6 +298,7 @@ export default class DroneCommand {
 
   /**
    * Maps the arguments to the class
+   * @returns {void}
    * @private
    */
   _mapArguments() {
@@ -323,7 +306,9 @@ export default class DroneCommand {
       const init = {
         enumerable: false,
         get: () =&gt; arg,
-        set: v =&gt; arg.value = v,
+        set: v =&gt; {
+          arg.value = v;
+        },
       };
 
       Object.defineProperty(this, arg.name, init);
