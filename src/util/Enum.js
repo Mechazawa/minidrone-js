@@ -1,7 +1,6 @@
 import {constant as constantCase} from 'case';
 import {getTypeName} from './reflection';
 
-
 /**
  * Base enum class
  * @example
