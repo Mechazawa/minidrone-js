@@ -189,7 +189,6 @@ export default class CommandParser {
           }
           break;
         case 'float':
-          console.debug(buffer.slice(bufferOffset, 4 + bufferOffset));
           value = buffer.readFloatBE(bufferOffset);
           break;
         case 'double':
