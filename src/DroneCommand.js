@@ -219,6 +219,7 @@ export default class DroneCommand {
    * Converts the command to it's buffer representation
    * @returns {Buffer} - Command buffer
    * @todo don't fill in message id but use the first byte of the buffer to look up the current step in the connection handler
+   * @throws TypeError
    */
   toBuffer() {
     const bufferLength = 6 + this.arguments.reduce((acc, val) => val.getValueSize() + acc, 0);
