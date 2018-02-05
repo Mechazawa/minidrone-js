@@ -72,6 +72,12 @@ export default class DroneCommandArgument {
       return this._value + '\0';
     } else if (this.type === 'float') {
       return Math.fround(this._value);
+
+      /**
+       * Javascript uses doubles by default not fixed
+       * precision or decimals. This means that we can
+       * just return the value without rounding it.
+       */
     }
 
     return this._value;
