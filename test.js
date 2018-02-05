@@ -19,7 +19,7 @@ const testData = [
 
 for (const row of testData) {
   const buffer = new Buffer(row.splice(2)); // Remove device id and message counter
-  const command = parser.getCommandFromBuffer(buffer);
+  const command = parser.parseBuffer(buffer);
 
   console.log(command.toString(true));
 }
