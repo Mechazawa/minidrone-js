@@ -160,6 +160,7 @@ export default class CommandParser {
    * @param {Buffer} buffer - The command buffer without the first two bytes
    * @returns {DroneCommand} - Parsed drone command
    * @throws InvalidCommandError
+   * @throws TypeError
    */
   parseBuffer(buffer) {
     const command = this._getCommandFromBuffer(buffer);
@@ -203,6 +204,8 @@ export default class CommandParser {
         case 'double':
           value = buffer.readDoubleLE(bufferOffset);
           break;
+        default:
+          throw new TypeError(`Unknown data type "${arg.type}"`);
       }
 
       arg.value = value;
