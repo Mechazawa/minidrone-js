@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../">
+  <title data-ice="title">src/DroneCommand.js | minidrone-js</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  <script src="script/manual.js"></script>
+<meta name="description" content="Parrot Minidrone library"><meta property="twitter:card" content="summary"><meta property="twitter:title" content="minidrone-js"><meta property="twitter:description" content="Parrot Minidrone library"></head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+<a style="position:relative; top:3px;" href="https://github.com/Mechazawa/minidrone-js"><img width="20px" src="./image/github.png"></a></header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/CommandParser.js~CommandParser.html">CommandParser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/DroneCommand.js~DroneCommand.html">DroneCommand</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/DroneCommandArgument.js~DroneCommandArgument.html">DroneCommandArgument</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/DroneConnection.js~DroneConnection.html">DroneConnection</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/InvalidCommandError.js~InvalidCommandError.html">InvalidCommandError</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#util">util</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/util/Enum.js~Enum.html">Enum</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getTypeName">getTypeName</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/DroneCommand.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">import DroneCommandArgument from &apos;./DroneCommandArgument&apos;;
+import Enum from &apos;./util/Enum&apos;;
+
+const bufferType = new Enum({
+  ACK: 0x02, // Acknowledgment of previously received data
+  DATA: 0x02, // Normal data (no ack requested)
+  NON_ACK: 0x02, // Same as DATA
+  HIGH_PRIO: 0x02, // Not sure about this one could be LLD
+  LOW_LATENCY_DATA: 0x03, // Treated as normal data on the network, but are given higher priority internally
+  DATA_WITH_ACK: 0x04, // Data requesting an ack. The receiver must send an ack for this data unit!
+});
+
+const bufferCharTranslationMap = {
+  ACK: &apos;ACK_COMMAND&apos;,
+  DATA: &apos;SEND_NO_ACK&apos;,
+  NON_ACK: &apos;SEND_NO_ACK&apos;,
+  HIGH_PRIO: &apos;SEND_HIGH_PRIORITY&apos;,
+  LOW_LATENCY_DATA: &apos;SEND_NO_ACK&apos;,
+  DATA_WITH_ACK: &apos;SEND_WITH_ACK&apos;,
+};
+
+// the following characteristic UUID segments come from the documentation at
+// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
+// the 4th bytes are used to identify the characteristic
+// the usage of the channels are also documented here
+// http://forum.developer.parrot.com/t/ble-characteristics-of-minidrones/5912/2
+const characteristicSendUuids = new Enum({
+  SEND_NO_ACK: &apos;0a&apos;, // not-ack commands (PCMD only)
+  SEND_WITH_ACK: &apos;0b&apos;, // ack commands (all piloting commands)
+  SEND_HIGH_PRIORITY: &apos;0c&apos;, // emergency commands
+  ACK_COMMAND: &apos;1e&apos;, // ack for data sent on 0e
+});
+
+const stepStore = {};
+
+/**
+ * used to count the drone command steps
+ * @todo Make this handled by the {@link DroneConnection} class
+ * @param id
+ * @returns {number}
+ */
+function getStep(id) {
+  if (typeof stepStore[id] === &apos;undefined&apos;) {
+    stepStore[id] = 0;
+  }
+
+  const out = stepStore[id];
+
+  stepStore[id] = (stepStore[id] + 1)&amp;0xFF;
+
+  return out;
+}
+
+/**
+ * Drone command
+ *
+ * Used for building commands to be sent to the drone. It
+ * is also used for the sensor readings.
+ *
+ * Arguments are automatically mapped on the object. This
+ * means that it is easy to set command arguments. Default
+ * arguments values are 0 or their enum equivalent by default.
+ *
+ * @example
+ * const parser = new CommandParser();
+ * const backFlip = parser.getCommand(&apos;minidrone&apos;, &apos;Animations&apos;, &apos;Flip&apos;, {direction: &apos;back&apos;});
+ * const frontFlip = backFlip.clone();
+ *
+ * backFlip.direction = &apos;front&apos;;
+ *
+ * drone.runCommand(backFlip);
+ */
+export default class DroneCommand {
+  /**
+   * Creates a new DroneCommand instance
+   * @param {object} project - Project node from the xml spec
+   * @param {object} class_ - Class node from the xml spec
+   * @param {object} command - Command node from the xml spec
+   */
+  constructor(project, class_, command) {
+    this._project = project;
+    this._projectId = Number(project.$.id);
+    this._projectName = String(project.$.name);
+
+    this._class = class_;
+    this._classId = Number(class_.$.id);
+    this._className = String(class_.$.name);
+
+    this._command = command;
+    this._commandId = Number(command.$.id);
+    this._commandName = String(command.$.name);
+
+    this._deprecated = command.$.deprecated === &apos;true&apos;;
+    this._description = String(command._).trim();
+    this._arguments = (command.arg || []).map(x =&gt; new DroneCommandArgument(x));
+
+    // NON_ACK, ACK or HIGH_PRIO. Defaults to ACK
+    this._buffer = command.$.buffer || &apos;DATA_WITH_ACK&apos;;
+
+    this._mapArguments();
+  }
+
+  /**
+   * The project id
+   * @returns {number}
+   */
+  get projectId() {
+    return this._projectId;
+  }
+
+  /**
+   * The project name (minidrone, common, etc)
+   * @returns {string}
+   */
+  get projectName() {
+    return this._projectName;
+  }
+
+  /**
+   * The class id
+   * @returns {number}
+   */
+  get classId() {
+    return this._classId;
+  }
+
+  /**
+   * The class name
+   * @returns {string}
+   */
+  get className() {
+    return this._className;
+  }
+
+  /**
+   * The command id
+   * @returns {number}
+   */
+  get commandId() {
+    return this._commandId;
+  }
+
+  /**
+   * The command name
+   * @returns {string}
+   */
+  get commandName() {
+    return this._commandName;
+  }
+
+  /**
+   * Array containing the drone arguments
+   * @returns {DroneCommandArgument[]}
+   */
+  get arguments() {
+    return this._arguments;
+  }
+
+  /**
+   * Returns if the command has any arguments
+   * @returns {boolean}
+   */
+  hasArguments() {
+    return this.arguments.length &gt; 0;
+  }
+
+  /**
+   * Get the argument names. These names are also mapped to the instance
+   * @returns {string[]}
+   */
+  get argumentNames() {
+    return this.arguments.map(x =&gt; x.name);
+  }
+
+  /**
+   * Get the command description
+   * @returns {string}
+   */
+  get description() {
+    return this._description;
+  }
+
+  /**
+   * Get if the command has been deprecated
+   * @returns {boolean}
+   */
+  get deprecated() {
+    return this._deprecated;
+  }
+
+  /**
+   * Get the send characteristic uuid based on the buffer type
+   * @returns {string}
+   */
+  get sendCharacteristicUuid() {
+    const t = bufferCharTranslationMap[this.bufferType] || &apos;SEND_WITH_ACK&apos;;
+
+    return &apos;fa&apos; + characteristicSendUuids[t];
+  }
+
+  /**
+   * Checks if the command has a certain argument
+   * @param {string} key - Argument name
+   * @returns {boolean} - If the argument exists
+   */
+  hasArgument(key) {
+    return this.arguments.findIndex(x =&gt; x.name === key) !== -1;
+  }
+
+  /**
+   * Clones the instance
+   * @returns {DroneCommand}
+   */
+  clone() {
+    return new this.constructor(this._project, this._class, this._command);
+  }
+
+  /**
+   * Converts the command to it&apos;s buffer representation
+   * @returns {Buffer} - Command buffer
+   * @todo don&apos;t fill in message id but use the first byte of the buffer to look up the current step in the connection handler
+   */
+  toBuffer() {
+    const bufferLength = 6 + this.arguments.reduce((acc, val) =&gt; val.getValueSize() + acc, 0);
+    const buffer = new Buffer(bufferLength);
+
+    const messageId = getStep(this.bufferType);
+
+    buffer.fill(0);
+
+    buffer.writeUInt16LE(this.bufferFlag, 0);
+    buffer.writeUInt16LE(messageId, 1);
+
+    buffer.writeUInt16LE(this.projectId, 2);
+    buffer.writeUInt16LE(this.classId, 3);
+    buffer.writeUInt16LE(this.commandId, 4); // two bytes
+
+    let bufferOffset = 6;
+
+    for (const arg of this.arguments) {
+      let valueSize = arg.getValueSize();
+
+      switch (arg.type) {
+        case &apos;u8&apos;:
+        case &apos;u16&apos;:
+        case &apos;u32&apos;:
+        case &apos;u64&apos;:
+          buffer.writeUIntLE(Math.floor(arg.value), bufferOffset, valueSize);
+          break;
+        case &apos;i8&apos;:
+        case &apos;i16&apos;:
+        case &apos;i32&apos;:
+        case &apos;i64&apos;:
+        case &apos;enum&apos;:
+          buffer.writeIntLE(Math.floor(arg.value), bufferOffset, valueSize);
+          break;
+        case &apos;string&apos;:
+          buffer.write(arg.value, bufferOffset, valueSize, &apos;ascii&apos;);
+          break;
+        case &apos;float&apos;:
+          buffer.writeFloatLE(arg.value, bufferOffset);
+          break;
+        case &apos;double&apos;:
+          buffer.writeDoubleLE(arg.value, bufferOffset);
+          break
+      }
+
+      bufferOffset += valueSize;
+    }
+
+    return buffer;
+  }
+
+  /**
+   * Maps the arguments to the class
+   * @private
+   */
+  _mapArguments() {
+    for (const arg of this.arguments) {
+      const init = {
+        enumerable: false,
+        get: () =&gt; arg,
+        set: v =&gt; arg.value = v,
+      };
+
+      Object.defineProperty(this, arg.name, init);
+    }
+  }
+
+  /**
+   * Returns a string representation of a DroneCommand
+   * @param {boolean} debug - If extra debug information should be shown
+   * @returns {string} - String representation if the instance
+   * @example
+   * const str = command.toString();
+   *
+   * str === &apos;minidrone PilotingSettingsState PreferredPilotingModeChanged mode=&quot;medium&quot;(1)&apos;;
+   */
+  toString(debug = false) {
+    const argStr = this.arguments.map(x =&gt; x.toString(debug)).join(&apos; &apos;).trim();
+
+    return (this.getToken() + &apos; &apos; + argStr).trim();
+  }
+
+  /**
+   * Get the command buffer type
+   * @returns {string}
+   */
+  get bufferType() {
+    return this._buffer.toUpperCase();
+  }
+
+  /**
+   * Get the command buffer flag based on it&apos;s type
+   * @returns {number}
+   */
+  get bufferFlag() {
+    return bufferType[this.bufferType];
+  }
+
+  /**
+   * Get the token representation of the command. This
+   * is useful for registering sensors for example
+   * @returns {string}
+   * @example
+   * const backFlip = parser.getCommand(&apos;minidrone&apos;, &apos;Animations&apos;, &apos;Flip&apos;, {direction: &apos;back&apos;});
+   *
+   * backFlip.getToken() === &apos;minidrone-Animations-Flip&apos;;
+   */
+  getToken() {
+    return [this.projectName, this.className, this.commandName].join(&apos;-&apos;);
+  }
+}
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(1.0.4)</span><img src="./image/esdoc-logo-mini-black.png"></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>

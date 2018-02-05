@@ -1,0 +1,85 @@
+{
+  "coverage": "64.81%",
+  "expectCount": 108,
+  "actualCount": 70,
+  "files": {
+    "src/CommandParser.js": {
+      "expectCount": 10,
+      "actualCount": 8,
+      "undocumentLines": [
+        7,
+        8
+      ]
+    },
+    "src/DroneCommand.js": {
+      "expectCount": 40,
+      "actualCount": 23,
+      "undocumentLines": [
+        4,
+        13,
+        27,
+        34,
+        81,
+        82,
+        83,
+        85,
+        86,
+        87,
+        89,
+        90,
+        91,
+        93,
+        94,
+        95,
+        98
+      ]
+    },
+    "src/DroneCommandArgument.js": {
+      "expectCount": 16,
+      "actualCount": 11,
+      "undocumentLines": [
+        16,
+        17,
+        18,
+        19,
+        32
+      ]
+    },
+    "src/DroneConnection.js": {
+      "expectCount": 29,
+      "actualCount": 16,
+      "undocumentLines": [
+        6,
+        7,
+        10,
+        19,
+        35,
+        59,
+        61,
+        62,
+        63,
+        65,
+        70,
+        71,
+        114
+      ]
+    },
+    "src/InvalidCommandError.js": {
+      "expectCount": 3,
+      "actualCount": 2,
+      "undocumentLines": [
+        16
+      ]
+    },
+    "src/util/Enum.js": {
+      "expectCount": 9,
+      "actualCount": 9,
+      "undocumentLines": []
+    },
+    "src/util/reflection.js": {
+      "expectCount": 1,
+      "actualCount": 1,
+      "undocumentLines": []
+    }
+  }
+}
