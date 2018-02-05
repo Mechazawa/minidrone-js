@@ -16,7 +16,7 @@ const handshakeUuids = [
 // the following UUID segments come from the Mambo and from the documenation at
 // http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
 // the 3rd and 4th bytes are used to identify the service
-const service_uuids = {
+const serviceUuids = {
   'fa': 'ARCOMMAND_SENDING_SERVICE',
   'fb': 'ARCOMMAND_RECEIVING_SERVICE',
   'fc': 'PERFORMANCE_COUNTER_SERVICE',
@@ -61,6 +61,7 @@ export default class DroneConnection extends EventEmitter {
     this._characteristicLookupCache = {};
     this._commandCallback = {};
     this._sensorStore = {};
+    this._stepStore = {};
 
     this.droneFilter = droneFilter;
 
@@ -133,7 +134,7 @@ export default class DroneConnection extends EventEmitter {
     const matchesFilter = !this.droneFilter || localName === this.droneFilter;
 
     const localNameMatch = matchesFilter || DRONE_PREFIXES.some((prefix) => localName && localName.indexOf(prefix) >= 0);
-    const manufacturerMatch = manufacturer && (MANUFACTURER_SERIALS.indexOf(manufacturer) >= 0);
+    const manufacturerMatch = manufacturer && MANUFACTURER_SERIALS.indexOf(manufacturer) >= 0;
 
     // Is TRUE according to droneFilter or if empty, for EITHER an "RS_" name OR manufacturer code.
     return localNameMatch || manufacturerMatch;
@@ -213,12 +214,18 @@ export default class DroneConnection extends EventEmitter {
   }
 
   /**
-   *
+   * Send a command to the drone and execute it
    * @param {DroneCommand} command
    */
   runCommand(command) {
     Logger.debug('SEND: ', command.toString());
-    this.getCharacteristic(command.sendCharacteristicUuid).write(command.toBuffer(), true);
+
+    const buffer = command.toBuffer();
+    const messageId = this._getStep(command.bufferType);
+
+    buffer.writeUInt16LE(messageId, 1);
+
+    this.getCharacteristic(command.sendCharacteristicUuid).write(buffer, true);
   }
 
   /**
@@ -241,6 +248,7 @@ export default class DroneConnection extends EventEmitter {
       case 'ACK_COMMAND_SENT':
       case 'ACK_HIGH_PRIORITY':
         const callback = this._commandCallback[channel];
+
         delete this._commandCallback[channel];
 
         if (typeof callback === 'function') {
@@ -344,5 +352,22 @@ export default class DroneConnection extends EventEmitter {
    */
   set logLevel(value) {
     Logger.level = typeof value === 'number' ? value : value.toString();
+  }
+
+  /**
+   * used to count the drone command steps
+   * @param {string} id
+   * @returns {number}
+   */
+  _getStep(id) {
+    if (typeof this._stepStore[id] === 'undefined') {
+      this._stepStore[id] = 0;
+    }
+
+    const out = this._stepStore[id];
+
+    this._stepStore[id] = this._stepStore[id] + 1 & 0xFF;
+
+    return out;
   }
 }

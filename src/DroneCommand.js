@@ -225,12 +225,11 @@ export default class DroneCommand {
     const bufferLength = 6 + this.arguments.reduce((acc, val) => val.getValueSize() + acc, 0);
     const buffer = new Buffer(bufferLength);
 
-    const messageId = getStep(this.bufferType);
-
     buffer.fill(0);
 
     buffer.writeUInt16LE(this.bufferFlag, 0);
-    buffer.writeUInt16LE(messageId, 1);
+
+    // Skip command counter (offset 1) because it's set in DroneConnection::runCommand
 
     buffer.writeUInt16LE(this.projectId, 2);
     buffer.writeUInt16LE(this.classId, 3);
