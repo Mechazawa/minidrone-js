@@ -160,23 +160,45 @@ export default class DroneCommandArgument {
   /**
    * Returns a string representation of the DroneCommandArgument instance
    * @param {boolean} debug - If extra debug info should be shown.
+   * @param {number} precision - Amount of precision for numerical values
    * @returns {string}
    */
-  toString(debug = false) {
-    if (this.hasEnumProperty) {
-      const valueName = this.enum.findForValue(this.value);
+  toString(debug = false, precision = 3) {
+    let value;
 
-      return `${this.name}="${valueName}"(${this.value})`;
+    switch (this.type) {
+      case 'string':
+        value = this.value;
+
+        while (value.endsWith('\0')) {
+          value = value.substring(0, value.length - 1);
+        }
+
+        value = `"${value}"`;
+        break;
+      case 'u8':
+      case 'i8':
+      case 'u16':
+      case 'i16':
+      case 'u32':
+      case 'i32':
+      case 'u64':
+      case 'i64':
+        value = this.value;
+        break;
+      case 'float':
+      case 'double':
+        value = this.value.toFixed(precision);
+        break;
+      case 'enum':
+        value = `"${this.enum.findForValue(this.value)}"[${this.value}]`;
+        break;
     }
-
-    const precision = 3;
-    const value = Math.round(this.value * (precision * 10)) / (precision * 10);
-    const message = `${this.name}="${value}"`;
 
     if (!debug) {
-      return message;
+      return `${this.name}=${value}`;
     }
 
-    return `${message}(${this.type})`;
+    return `(${this.type})${this.name}=${value}`;
   }
 }
