@@ -37,7 +37,8 @@
   },
   "scripts": {
     "build": "rm -r dist||true; mkdir dist && npx webpack",
-    "watch": "rm -r dist||true; mkdir dist && npx webpack --watch"
+    "watch": "rm -r dist||true; mkdir dist && npx webpack --watch",
+    "docs": "npx esdoc"
   },
   "babel": {
     "presets": [
