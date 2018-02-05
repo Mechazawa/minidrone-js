@@ -205,7 +205,7 @@ export default class CommandParser {
           value = buffer.readDoubleLE(bufferOffset);
           break;
         default:
-          throw new TypeError(`Unknown data type "${arg.type}"`);
+          throw new TypeError(`Can't parse buffer: unknown data type "${arg.type}" for argument "${arg.name}" in ${command.getToken()}`);
       }
 
       arg.value = value;

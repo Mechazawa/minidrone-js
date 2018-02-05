@@ -262,7 +262,9 @@ export default class DroneCommand {
           break;
         case 'double':
           buffer.writeDoubleLE(arg.value, bufferOffset);
-          break
+          break;
+        default:
+          throw new TypeError(`Can't encode buffer: unknown data type "${arg.type}" for argument "${arg.name}" in ${this.getToken()}`);
       }
 
       bufferOffset += valueSize;
