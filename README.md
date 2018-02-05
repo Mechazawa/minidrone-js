@@ -13,6 +13,13 @@ This library is loosely based on the work by [fetherston] for
 [fetherston]: https://github.com/fetherston
 [npm-parrot-minidrone]: https://github.com/fetherston/npm-parrot-minidrone
 
+# Functionality
+This library is designed to support the two-way command communication 
+protocol used by Parrot drones. It supports receiving sensor updates 
+and sending commands based on the [xml specification]. 
+
+[xml specification]: https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/
+
 # Installation
 
 Using yarn
@@ -36,9 +43,16 @@ const {DroneConnection, CommandParser} = require('minidrone-js');
 
 const parser = new CommandParser();
 const drone = new DroneConnection();
+
+
+/* 
+ * Commands are easily found by reading the xml specification
+ * https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/
+ */
 const takeoff = parser.getCommand('minidrone', 'Piloting', 'TakeOff');
 const landing = parser.getCommand('minidrone', 'Piloting', 'Landing');
 const backFlip = parser.getCommand('minidrone', 'Animations', 'Flip', {direction: 'back'});
+
 
 
 drone.on('connected', () => {

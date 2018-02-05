@@ -1,6 +1,17 @@
 import Enum from './util/Enum';
 
+/**
+ * Drone Command Argument class
+ *
+ * Used for storing command arguments
+ *
+ * @property {Enum|undefined} enum - Enum store containing possible enum values if `this.type === 'enum'`. If set then `this.hasEnumProperty === true`.
+ */
 export default class DroneCommandArgument {
+  /**
+   * Command argument constructor
+   * @param {object} raw - Raw command argument data from the xml specification
+   */
   constructor(raw) {
     this._name = raw.$.name;
     this._description = String(raw._).trim();
@@ -27,18 +38,35 @@ export default class DroneCommandArgument {
     }
   }
 
+  /**
+   * Parameter name
+   * @returns {string}
+   */
   get name() {
     return this._name;
   }
 
+  /**
+   * Parameter description
+   * @returns {string}
+   */
   get description() {
     return this._description;
   }
 
+  /**
+   * Parameter type
+   * @returns {string}
+   */
   get type() {
     return this._type;
   }
 
+  /**
+   * Get the parameter value
+   * @returns {number|string}
+   * @see DroneCommandArgument#type
+   */
   get value() {
     if (this.type === 'string' && !this._value.endsWith('\0')) {
       return this._value + '\0';
@@ -49,10 +77,10 @@ export default class DroneCommandArgument {
     return this._value;
   }
 
-  get hasEnumProperty() {
-    return typeof this.enum !== 'undefined';
-  }
-
+  /**
+   * Set the parameter value
+   * @param value {number|string}
+   */
   set value(value) {
     if (Object.is(value, -0)) {
       value = 0;
@@ -61,6 +89,21 @@ export default class DroneCommandArgument {
     this._value = this._parseValue(value);
   }
 
+  /**
+   * If it has the enum property set
+   * @returns {boolean}
+   */
+  get hasEnumProperty() {
+    return typeof this.enum !== 'undefined';
+  }
+
+  /**
+   * Parses the value before setting it
+   * @param {number|string} value
+   * @returns {number|string}
+   * @private
+   * @throws TypeError
+   */
   _parseValue(value) {
     switch (this.type) {
       case 'enum':
@@ -74,7 +117,7 @@ export default class DroneCommandArgument {
           //   return value;
         }
 
-        throw new Error(`Value ${value} could not be interpreted as an enum value for ${this.name}. Available options are ${this.enum.toString()}`);
+        throw new TypeError(`Value ${value} could not be interpreted as an enum value for ${this.name}. Available options are ${this.enum.toString()}`);
       case 'string':
         return String(value);
     }
@@ -83,6 +126,10 @@ export default class DroneCommandArgument {
     return Number(value);
   }
 
+  /**
+   * Gets the byte size of the value.
+   * @returns {number}
+   */
   getValueSize() {
     switch (this.type) {
       case 'string':
@@ -110,6 +157,11 @@ export default class DroneCommandArgument {
     return 0;
   }
 
+  /**
+   * Returns a string representation of the DroneCommandArgument instance
+   * @param {boolean} debug - If extra debug info should be shown.
+   * @returns {string}
+   */
   toString(debug = false) {
     if (this.hasEnumProperty) {
       const valueName = this.enum.findForValue(this.value);

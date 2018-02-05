@@ -291,6 +291,10 @@ export default class DroneCommand {
    * Returns a string representation of a DroneCommand
    * @param {boolean} debug - If extra debug information should be shown
    * @returns {string} - String representation if the instance
+   * @example
+   * const str = command.toString();
+   *
+   * str === 'minidrone PilotingSettingsState PreferredPilotingModeChanged mode="medium"(1)';
    */
   toString(debug = false) {
     const argStr = this.arguments.map(x => x.toString(debug)).join(' ').trim();
