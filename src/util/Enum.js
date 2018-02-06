@@ -99,7 +99,7 @@ export default class Enum {
    * @returns {boolean}
    */
   hasValue(value) {
-    return this.values().includes(name);
+    return this.values().includes(value);
   }
 
   /**
