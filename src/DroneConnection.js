@@ -292,7 +292,7 @@ export default class DroneConnection extends EventEmitter {
        * @type {DroneCommand} - The sensor reading
        * @example
        * connection.on('sensor:minidrone-UsbAccessoryState-GunState', function(sensor) {
-       *  if (sensor.state.value === sensor.enum.READY) {
+       *  if (sensor.state.value === sensor.state.enum.READY) {
        *    console.log('The gun is ready to fire!');
        *  }
        * });
