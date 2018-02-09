@@ -298,6 +298,7 @@ export default class DroneConnection extends EventEmitter {
        * });
        */
       this.emit('sensor:' + token, command);
+      this.emit('sensor:*', command);
     } catch (e) {
       Logger.warn('Unable to parse packet:', buffer);
       Logger.warn(e);
