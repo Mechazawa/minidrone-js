@@ -41,13 +41,13 @@
 </nav>
 
 <div class="content" data-ice="content"><div class="header-notice">
-  <div data-ice="importPath" class="import-path"><pre class="prettyprint"><code data-ice="importPathCode">import DroneConnection from &apos;<span><a href="file/src/DroneConnection.js.html#lineNumber50">minidrone-js/src/DroneConnection.js</a></span>&apos;</code></pre></div>
+  <div data-ice="importPath" class="import-path"><pre class="prettyprint"><code data-ice="importPathCode">import DroneConnection from &apos;<span><a href="file/src/DroneConnection.js.html#lineNumber51">minidrone-js/src/DroneConnection.js</a></span>&apos;</code></pre></div>
   <span data-ice="access">public</span>
   <span data-ice="kind">class</span>
   
   
   
-  <span data-ice="source">| <span><a href="file/src/DroneConnection.js.html#lineNumber50">source</a></span></span>
+  <span data-ice="source">| <span><a href="file/src/DroneConnection.js.html#lineNumber51">source</a></span></span>
 </div>
 
 <div class="self-detail detail">
@@ -101,7 +101,7 @@
           
           
           
-          <span class="code" data-ice="name"><span><a href="class/src/DroneConnection.js~DroneConnection.html#instance-constructor-constructor">constructor</a></span></span><span class="code" data-ice="signature">(droneFilter: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></span>)</span>
+          <span class="code" data-ice="name"><span><a href="class/src/DroneConnection.js~DroneConnection.html#instance-constructor-constructor">constructor</a></span></span><span class="code" data-ice="signature">(droneFilter: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></span>, warmup: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></span>)</span>
         </p>
       </div>
       <div>
@@ -297,6 +297,34 @@
     <td>
       <span class="access" data-ice="access">public</span>
       
+      
+      
+      <span class="override" data-ice="override"></span>
+    </td>
+    <td>
+      <div>
+        <p>
+          
+          
+          
+          <span class="code" data-ice="name"><span><a href="class/src/DroneConnection.js~DroneConnection.html#instance-member-parser">parser</a></span></span><span class="code" data-ice="signature">: <span>*</span></span>
+        </p>
+      </div>
+      <div>
+        
+        
+        
+      </div>
+    </td>
+    <td>
+      
+      
+    </td>
+  </tr>
+<tr data-ice="target">
+    <td>
+      <span class="access" data-ice="access">public</span>
+      
       <span class="kind" data-ice="kind">get</span>
       
       <span class="override" data-ice="override"></span>
@@ -370,34 +398,6 @@
           
           
           <span class="code" data-ice="name"><span><a href="class/src/DroneConnection.js~DroneConnection.html#instance-member-_commandCallback">_commandCallback</a></span></span><span class="code" data-ice="signature">: {}</span>
-        </p>
-      </div>
-      <div>
-        
-        
-        
-      </div>
-    </td>
-    <td>
-      
-      
-    </td>
-  </tr>
-<tr data-ice="target">
-    <td>
-      <span class="access" data-ice="access">private</span>
-      
-      
-      
-      <span class="override" data-ice="override"></span>
-    </td>
-    <td>
-      <div>
-        <p>
-          
-          
-          
-          <span class="code" data-ice="name"><span><a href="class/src/DroneConnection.js~DroneConnection.html#instance-member-_parser">_parser</a></span></span><span class="code" data-ice="signature">: <span>*</span></span>
         </p>
       </div>
       <div>
@@ -846,11 +846,11 @@ Validates it is a drone and attempts to connect.</p>
     
     
     
-    <span class="code" data-ice="name">constructor</span><span class="code" data-ice="signature">(droneFilter: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></span>)</span>
+    <span class="code" data-ice="name">constructor</span><span class="code" data-ice="signature">(droneFilter: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></span>, warmup: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></span>)</span>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber55">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber57">source</a></span></span>
     </span>
   </h3>
 
@@ -873,8 +873,17 @@ Validates it is a drone and attempts to connect.</p>
     <tr data-ice="property" data-depth="0">
       <td data-ice="name" class="code" data-depth="0">droneFilter</td>
       <td data-ice="type" class="code"><span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></span></td>
-      <td data-ice="appendix"></td>
+      <td data-ice="appendix"><ul><li>optional</li>
+<li>default: </li></ul></td>
       <td data-ice="description"><p>The drone name leave blank for no filter</p>
+</td>
+    </tr>
+<tr data-ice="property" data-depth="0">
+      <td data-ice="name" class="code" data-depth="0">warmup</td>
+      <td data-ice="type" class="code"><span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></span></td>
+      <td data-ice="appendix"><ul><li>optional</li>
+<li>default: true</li></ul></td>
+      <td data-ice="description"><p>Warmup the command parser</p>
 </td>
     </tr>
 </tbody>
@@ -914,7 +923,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber58">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber60">source</a></span></span>
     </span>
   </h3>
 
@@ -957,7 +966,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber197">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber204">source</a></span></span>
     </span>
   </h3>
 
@@ -1013,7 +1022,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber65">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber67">source</a></span></span>
     </span>
   </h3>
 
@@ -1056,7 +1065,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber345">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber353">source</a></span></span>
     </span>
   </h3>
 
@@ -1113,7 +1122,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber354">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber362">source</a></span></span>
     </span>
   </h3>
 
@@ -1157,7 +1166,50 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber71">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber73">source</a></span></span>
+    </span>
+  </h3>
+
+  
+  
+  
+  
+
+  
+
+  <div data-ice="properties">
+</div>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+</div>
+<div class="detail" data-ice="detail">
+  <h3 data-ice="anchor" id="instance-member-parser">
+    <span class="access" data-ice="access">public</span>
+    
+    
+    
+    
+    
+    <span class="code" data-ice="name">parser</span><span class="code" data-ice="signature">: <span>*</span></span>
+    <span class="right-info">
+      
+      
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber74">source</a></span></span>
     </span>
   </h3>
 
@@ -1200,7 +1252,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber190">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber197">source</a></span></span>
     </span>
   </h3>
 
@@ -1258,7 +1310,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber60">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber62">source</a></span></span>
     </span>
   </h3>
 
@@ -1301,50 +1353,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber61">source</a></span></span>
-    </span>
-  </h3>
-
-  
-  
-  
-  
-
-  
-
-  <div data-ice="properties">
-</div>
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-  
-</div>
-<div class="detail" data-ice="detail">
-  <h3 data-ice="anchor" id="instance-member-_parser">
-    <span class="access" data-ice="access">private</span>
-    
-    
-    
-    
-    
-    <span class="code" data-ice="name">_parser</span><span class="code" data-ice="signature">: <span>*</span></span>
-    <span class="right-info">
-      
-      
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber72">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber63">source</a></span></span>
     </span>
   </h3>
 
@@ -1387,7 +1396,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber115">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber122">source</a></span></span>
     </span>
   </h3>
 
@@ -1430,7 +1439,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber62">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber64">source</a></span></span>
     </span>
   </h3>
 
@@ -1473,7 +1482,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber63">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber65">source</a></span></span>
     </span>
   </h3>
 
@@ -1519,7 +1528,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber206">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber213">source</a></span></span>
     </span>
   </h3>
 
@@ -1593,7 +1602,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber316">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber324">source</a></span></span>
     </span>
   </h3>
 
@@ -1681,7 +1690,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber330">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber338">source</a></span></span>
     </span>
   </h3>
 
@@ -1756,7 +1765,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber220">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber227">source</a></span></span>
     </span>
   </h3>
 
@@ -1819,7 +1828,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber363">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber371">source</a></span></span>
     </span>
   </h3>
 
@@ -1892,7 +1901,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber237">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber244">source</a></span></span>
     </span>
   </h3>
 
@@ -1960,7 +1969,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber85">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber92">source</a></span></span>
     </span>
   </h3>
 
@@ -2033,7 +2042,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber102">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber109">source</a></span></span>
     </span>
   </h3>
 
@@ -2107,7 +2116,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber147">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber154">source</a></span></span>
     </span>
   </h3>
 
@@ -2163,7 +2172,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber275">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber282">source</a></span></span>
     </span>
   </h3>
 
@@ -2231,7 +2240,7 @@ Validates it is a drone and attempts to connect.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber127">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/DroneConnection.js.html#lineNumber134">source</a></span></span>
     </span>
   </h3>
 

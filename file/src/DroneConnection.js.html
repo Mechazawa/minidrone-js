@@ -89,13 +89,15 @@ const characteristicReceiveUuids = new Enum({
  *
  * @fires DroneCommand#connected
  * @fires DroneCommand#sensor:
+ * @property {CommandParser} parser - {@link CommandParser} instance
  */
 export default class DroneConnection extends EventEmitter {
   /**
    * Creates a new DroneConnection instance
-   * @param {string} droneFilter - The drone name leave blank for no filter
+   * @param {string} [droneFilter=] - The drone name leave blank for no filter
+   * @param {boolean} [warmup=true] - Warmup the command parser
    */
-  constructor(droneFilter = &apos;&apos;) {
+  constructor(droneFilter = &apos;&apos;, warmup = true) {
     super();
 
     this.characteristics = [];
@@ -112,7 +114,12 @@ export default class DroneConnection extends EventEmitter {
     // pre-loading it.
     // eslint-disable-next-line no-eval
     this.noble = eval(&apos;require(\&apos;noble\&apos;)&apos;);
-    this._parser = new CommandParser();
+    this.parser = new CommandParser();
+
+    if (warmup) {
+      // We&apos;ll do it for you so you don&apos;t have to
+      this.parser.warmup();
+    }
 
     // bind noble event handlers
     this.noble.on(&apos;stateChange&apos;, state =&gt; this._onNobleStateChange(state));
@@ -335,12 +342,13 @@ export default class DroneConnection extends EventEmitter {
        * @type {DroneCommand} - The sensor reading
        * @example
        * connection.on(&apos;sensor:minidrone-UsbAccessoryState-GunState&apos;, function(sensor) {
-       *  if (sensor.state.value === sensor.enum.READY) {
+       *  if (sensor.state.value === sensor.state.enum.READY) {
        *    console.log(&apos;The gun is ready to fire!&apos;);
        *  }
        * });
        */
       this.emit(&apos;sensor:&apos; + token, command);
+      this.emit(&apos;sensor:*&apos;, command);
     } catch (e) {
       Logger.warn(&apos;Unable to parse packet:&apos;, buffer);
       Logger.warn(e);

@@ -238,7 +238,9 @@ export default class DroneCommandArgument {
         break;
       case &apos;float&apos;:
       case &apos;double&apos;:
-        value = this.value.toFixed(precision);
+        // This will provide a reasonable estimate of the
+        // floating point value for debugging purposes.
+        value = this.value.toFixed(precision).replace(/0+$/, &apos;&apos;);
         break;
       case &apos;enum&apos;:
         value = `&quot;${this.enum.findForValue(this.value)}&quot;[${this.value}]`;

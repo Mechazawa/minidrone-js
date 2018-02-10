@@ -1,14 +1,15 @@
 {
-  "coverage": "65.13%",
-  "expectCount": 109,
-  "actualCount": 71,
+  "coverage": "65.17%",
+  "expectCount": 112,
+  "actualCount": 73,
   "files": {
     "src/CommandParser.js": {
-      "expectCount": 11,
-      "actualCount": 9,
+      "expectCount": 14,
+      "actualCount": 11,
       "undocumentLines": [
-        6,
-        7
+        21,
+        239,
+        288
       ]
     },
     "src/DroneCommand.js": {
@@ -53,15 +54,15 @@
         10,
         19,
         35,
-        58,
         60,
-        61,
         62,
         63,
+        64,
         65,
-        71,
-        72,
-        115
+        67,
+        73,
+        74,
+        122
       ]
     },
     "src/InvalidCommandError.js": {

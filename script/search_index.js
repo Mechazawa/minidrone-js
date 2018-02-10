@@ -336,15 +336,33 @@ window.esdocSearchIndex = [
     "method"
   ],
   [
+    "src/commandparser.js~commandparser#_commandcache",
+    "class/src/CommandParser.js~CommandParser.html#instance-member-_commandCache",
+    "src/CommandParser.js~CommandParser#_commandCache",
+    "member"
+  ],
+  [
     "src/commandparser.js~commandparser#_getcommandfrombuffer",
     "class/src/CommandParser.js~CommandParser.html#instance-method-_getCommandFromBuffer",
     "src/CommandParser.js~CommandParser#_getCommandFromBuffer",
     "method"
   ],
   [
+    "src/commandparser.js~commandparser#_getjson",
+    "class/src/CommandParser.js~CommandParser.html#instance-method-_getJson",
+    "src/CommandParser.js~CommandParser#_getJson",
+    "method"
+  ],
+  [
     "src/commandparser.js~commandparser#_getxml",
     "class/src/CommandParser.js~CommandParser.html#instance-method-_getXml",
     "src/CommandParser.js~CommandParser#_getXml",
+    "method"
+  ],
+  [
+    "src/commandparser.js~commandparser#constructor",
+    "class/src/CommandParser.js~CommandParser.html#instance-constructor-constructor",
+    "src/CommandParser.js~CommandParser#constructor",
     "method"
   ],
   [
@@ -366,9 +384,21 @@ window.esdocSearchIndex = [
     "method"
   ],
   [
-    "src/commandparser.js~commandparser._filemapping",
-    "class/src/CommandParser.js~CommandParser.html#static-get-_fileMapping",
-    "src/CommandParser.js~CommandParser._fileMapping",
+    "src/commandparser.js~commandparser.__arsdkpath",
+    "class/src/CommandParser.js~CommandParser.html#static-member-__arsdkPath",
+    "src/CommandParser.js~CommandParser.__arsdkPath",
+    "member"
+  ],
+  [
+    "src/commandparser.js~commandparser.__files",
+    "class/src/CommandParser.js~CommandParser.html#static-member-__files",
+    "src/CommandParser.js~CommandParser.__files",
+    "member"
+  ],
+  [
+    "src/commandparser.js~commandparser._arsdkxmlpath",
+    "class/src/CommandParser.js~CommandParser.html#static-get-_arsdkXmlPath",
+    "src/CommandParser.js~CommandParser._arsdkXmlPath",
     "member"
   ],
   [
@@ -726,12 +756,6 @@ window.esdocSearchIndex = [
     "method"
   ],
   [
-    "src/droneconnection.js~droneconnection#_parser",
-    "class/src/DroneConnection.js~DroneConnection.html#instance-member-_parser",
-    "src/DroneConnection.js~DroneConnection#_parser",
-    "member"
-  ],
-  [
     "src/droneconnection.js~droneconnection#_peripheral",
     "class/src/DroneConnection.js~DroneConnection.html#instance-member-_peripheral",
     "src/DroneConnection.js~DroneConnection#_peripheral",
@@ -825,6 +849,12 @@ window.esdocSearchIndex = [
     "src/droneconnection.js~droneconnection#noble",
     "class/src/DroneConnection.js~DroneConnection.html#instance-member-noble",
     "src/DroneConnection.js~DroneConnection#noble",
+    "member"
+  ],
+  [
+    "src/droneconnection.js~droneconnection#parser",
+    "class/src/DroneConnection.js~DroneConnection.html#instance-member-parser",
+    "src/DroneConnection.js~DroneConnection#parser",
     "member"
   ],
   [

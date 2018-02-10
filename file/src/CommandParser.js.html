@@ -45,62 +45,52 @@
 import DroneCommand from &apos;./DroneCommand&apos;;
 import Logger from &apos;winston&apos;;
 import InvalidCommandError from &apos;./InvalidCommandError&apos;;
-
-const _fileCache = {};
-const _commandCache = {};
+import { getInstalledPathSync as nodePath } from &apos;get-installed-path&apos;;
+import fs from &apos;fs&apos;;
+import * as path from &apos;path&apos;;
 
 /**
  * Command parser used for looking up commands in the xml definition
  */
 export default class CommandParser {
   /**
+   * CommandParser constructor
+   */
+  constructor() {
+    if (typeof CommandParser._fileCache === &apos;undefined&apos;) {
+      CommandParser._fileCache = {};
+    }
+
+    this._commandCache = {};
+  }
+
+  /**
    * Get an xml file and convert it to json
    * @param {string} name - Project name
    * @returns {Object} - Parsed Xml data using xml2js
    * @private
    */
-  _getXml(name) {
-    const file = CommandParser._fileMapping[name];
+  _getJson(name) {
+    const file = this._getXml(name);
 
     if (typeof file === &apos;undefined&apos;) {
       throw new Error(`Xml file ${name} could not be found`);
     }
 
-    if (typeof _fileCache[name] === &apos;undefined&apos;) {
-      _fileCache[name] = null;
+    if (typeof CommandParser._fileCache[name] === &apos;undefined&apos;) {
+      CommandParser._fileCache[name] = null;
 
       parseString(file, { async: false }, (e, result) =&gt; {
-        _fileCache[name] = result;
+        CommandParser._fileCache[name] = result;
       });
 
-      return this._getXml(name);
-    } else if (_fileCache[name] === null) {
+      return this._getJson(name);
+    } else if (CommandParser._fileCache[name] === null) {
       // Fuck javascript async hipster shit
-      return this._getXml(name);
+      return this._getJson(name);
     }
 
-    return _fileCache[name];
-  }
-
-  /**
-   * Used for file loading/lookup
-   * @returns {{minidrone: string, common: string}} - xml files with contents
-   * @private
-   */
-  static get _fileMapping() {
-    return {
-      minidrone: require(&apos;arsdk-xml/xml/minidrone.xml&apos;),
-      common: require(&apos;arsdk-xml/xml/common.xml&apos;),
-    };
-  }
-
-  /**
-   * Get a list of available files
-   * @returns {string[]} - Available files
-   * @private
-   */
-  static get _files() {
-    return Object.keys(CommandParser._fileMapping);
+    return CommandParser._fileCache[name];
   }
 
   /**
@@ -122,8 +112,8 @@ export default class CommandParser {
       commandName,
     ].join(&apos;-&apos;);
 
-    if (typeof _commandCache[cacheToken] === &apos;undefined&apos;) {
-      const project = this._getXml(projectName).project;
+    if (typeof this._commandCache[cacheToken] === &apos;undefined&apos;) {
+      const project = this._getJson(projectName).project;
 
       this._assertElementExists(project, &apos;project&apos;, projectName);
 
@@ -141,14 +131,14 @@ export default class CommandParser {
 
       const result = new DroneCommand(project, targetClass, targetCommand);
 
-      _commandCache[cacheToken] = result;
+      this._commandCache[cacheToken] = result;
 
       if (result.deprecated) {
         Logger.warn(`${result.toString()} has been deprecated`);
       }
     }
 
-    const target = _commandCache[cacheToken].clone();
+    const target = this._commandCache[cacheToken].clone();
 
     for (const arg of Object.keys(commandArguments)) {
       if (target.hasArgument(arg)) {
@@ -173,10 +163,11 @@ export default class CommandParser {
     const cacheToken = [projectId, classId, commandId].join(&apos;-&apos;);
 
     // Build command if needed
-    if (typeof _commandCache[cacheToken] === &apos;undefined&apos;) {
+    if (typeof this._commandCache[cacheToken] === &apos;undefined&apos;) {
       // Find project
       const project = CommandParser._files
-        .map(x =&gt; this._getXml(x).project)
+        .map(x =&gt; this._getJson(x).project)
+        .filter(x =&gt; typeof x !== &apos;undefined&apos;)
         .find(x =&gt; Number(x.$.id) === projectId);
 
       this._assertElementExists(project, &apos;project&apos;, projectId);
@@ -196,10 +187,10 @@ export default class CommandParser {
       this._assertElementExists(targetCommand, &apos;command&apos;, commandId, context);
 
       // Build command and store it
-      _commandCache[cacheToken] = new DroneCommand(project, targetClass, targetCommand);
+      this._commandCache[cacheToken] = new DroneCommand(project, targetClass, targetCommand);
     }
 
-    return _commandCache[cacheToken].clone();
+    return this._commandCache[cacheToken].clone();
   }
 
   /**
@@ -267,10 +258,38 @@ export default class CommandParser {
 
   /**
    * Warn up the parser by pre-fetching the xml files
+   * @param {string[]} files - List of files to load in defaults to {@link CommandParser._files}
    * @returns {void}
+   *
    */
-  warmup() {
-    CommandParser._files.forEach(file =&gt; this._getXml(file));
+  warmup(files = this.constructor._files) {
+    for (const file of files) {
+      this._getJson(file);
+    }
+  }
+
+  /**
+   * Mapping of known xml files
+   * @type {string[]} - known xml files
+   * @private
+   */
+  static get _files() {
+    if (typeof this.__files === &apos;undefined&apos;) {
+      const arsdkXmlPath = CommandParser._arsdkXmlPath;
+
+      const isFile = path =&gt; fs.lstatSync(path).isFile();
+
+      this.__files = fs
+        .readdirSync(arsdkXmlPath)
+        .map(String)
+        .filter(file =&gt; file.endsWith(&apos;.xml&apos;))
+        .filter(file =&gt; isFile(path.join(arsdkXmlPath, file)))
+        .map(file =&gt; file.replace(&apos;.xml&apos;, &apos;&apos;));
+
+      Logger.debug(`_files list found ${this._files.length} items`);
+    }
+
+    return this.__files;
   }
 
   /**
@@ -287,6 +306,32 @@ export default class CommandParser {
     if (typeof value === &apos;undefined&apos;) {
       throw new InvalidCommandError(value, type, target, context);
     }
+  }
+
+  /**
+   * Reads xml file from ArSDK synchronously without a cache
+   * @param {string} name - Xml file name
+   * @returns {string} - File contents
+   * @private
+   */
+  _getXml(name) {
+    const arsdkXmlPath = CommandParser._arsdkXmlPath;
+    const filePath = `${arsdkXmlPath}/${name}.xml`;
+
+    return fs.readFileSync(filePath);
+  }
+
+  /**
+   * Path of the ArSDK xml directory
+   * @returns {*|string} - Path
+   * @private
+   */
+  static get _arsdkXmlPath() {
+    if (typeof this.__arsdkPath === &apos;undefined&apos;) {
+      this.__arsdkPath = nodePath(&apos;arsdk-xml&apos;, { local: true }) + &apos;/xml&apos;;
+    }
+
+    return this.__arsdkPath;
   }
 }
 </code></pre>

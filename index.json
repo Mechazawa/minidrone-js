@@ -567,7 +567,7 @@
     "__docId__": 48,
     "kind": "file",
     "name": "src/CommandParser.js",
-    "content": "import { parseString } from 'xml2js';\nimport DroneCommand from './DroneCommand';\nimport Logger from 'winston';\nimport InvalidCommandError from './InvalidCommandError';\n\nconst _fileCache = {};\nconst _commandCache = {};\n\n/**\n * Command parser used for looking up commands in the xml definition\n */\nexport default class CommandParser {\n  /**\n   * Get an xml file and convert it to json\n   * @param {string} name - Project name\n   * @returns {Object} - Parsed Xml data using xml2js\n   * @private\n   */\n  _getXml(name) {\n    const file = CommandParser._fileMapping[name];\n\n    if (typeof file === 'undefined') {\n      throw new Error(`Xml file ${name} could not be found`);\n    }\n\n    if (typeof _fileCache[name] === 'undefined') {\n      _fileCache[name] = null;\n\n      parseString(file, { async: false }, (e, result) => {\n        _fileCache[name] = result;\n      });\n\n      return this._getXml(name);\n    } else if (_fileCache[name] === null) {\n      // Fuck javascript async hipster shit\n      return this._getXml(name);\n    }\n\n    return _fileCache[name];\n  }\n\n  /**\n   * Used for file loading/lookup\n   * @returns {{minidrone: string, common: string}} - xml files with contents\n   * @private\n   */\n  static get _fileMapping() {\n    return {\n      minidrone: require('arsdk-xml/xml/minidrone.xml'),\n      common: require('arsdk-xml/xml/common.xml'),\n    };\n  }\n\n  /**\n   * Get a list of available files\n   * @returns {string[]} - Available files\n   * @private\n   */\n  static get _files() {\n    return Object.keys(CommandParser._fileMapping);\n  }\n\n  /**\n   * Get a command based on it's path in the xml definition\n   * @param {string} projectName - The xml file name (project name)\n   * @param {string} className - The command class name\n   * @param {string} commandName - The command name\n   * @param {Object?} commandArguments - Optional command arguments\n   * @returns {DroneCommand} - Target command\n   * @throws InvalidCommandError\n   * @see {@link https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/}\n   * @example\n   * const parser = new CommandParser();\n   * const backFlip = parser.getCommand('minidrone', 'Animations', 'Flip', {direction: 'back'});\n   */\n  getCommand(projectName, className, commandName, commandArguments = {}) {\n    const cacheToken = [\n      projectName, className,\n      commandName,\n    ].join('-');\n\n    if (typeof _commandCache[cacheToken] === 'undefined') {\n      const project = this._getXml(projectName).project;\n\n      this._assertElementExists(project, 'project', projectName);\n\n      const context = [projectName];\n\n      const targetClass = project.class.find(v => v.$.name === className);\n\n      this._assertElementExists(targetClass, 'class', className);\n\n      context.push(className);\n\n      const targetCommand = targetClass.cmd.find(v => v.$.name === commandName);\n\n      this._assertElementExists(targetCommand, 'command', commandName);\n\n      const result = new DroneCommand(project, targetClass, targetCommand);\n\n      _commandCache[cacheToken] = result;\n\n      if (result.deprecated) {\n        Logger.warn(`${result.toString()} has been deprecated`);\n      }\n    }\n\n    const target = _commandCache[cacheToken].clone();\n\n    for (const arg of Object.keys(commandArguments)) {\n      if (target.hasArgument(arg)) {\n        target[arg] = commandArguments[arg];\n      }\n    }\n\n    return target;\n  }\n\n  /**\n   * Gets the command by analysing the buffer\n   * @param {Buffer} buffer - Command buffer without leading 2 bytes\n   * @returns {DroneCommand} - Buffer's related DroneCommand\n   * @private\n   */\n  _getCommandFromBuffer(buffer) {\n    const projectId = buffer.readUInt8(0);\n    const classId = buffer.readUInt8(1);\n    const commandId = buffer.readUInt8(2);\n\n    const cacheToken = [projectId, classId, commandId].join('-');\n\n    // Build command if needed\n    if (typeof _commandCache[cacheToken] === 'undefined') {\n      // Find project\n      const project = CommandParser._files\n        .map(x => this._getXml(x).project)\n        .find(x => Number(x.$.id) === projectId);\n\n      this._assertElementExists(project, 'project', projectId);\n\n      // find class\n      const targetClass = project.class.find(x => Number(x.$.id) === classId);\n\n      const context = [project.$.name];\n\n      this._assertElementExists(targetClass, 'class', classId, context);\n\n      // find command\n      const targetCommand = targetClass.cmd.find(x => Number(x.$.id) === commandId);\n\n      context.push(targetClass.$.name);\n\n      this._assertElementExists(targetCommand, 'command', commandId, context);\n\n      // Build command and store it\n      _commandCache[cacheToken] = new DroneCommand(project, targetClass, targetCommand);\n    }\n\n    return _commandCache[cacheToken].clone();\n  }\n\n  /**\n   * Parse the input buffer and get the correct command with parameters\n   * Used internally to parse sensor data\n   * @param {Buffer} buffer - The command buffer without the first two bytes\n   * @returns {DroneCommand} - Parsed drone command\n   * @throws InvalidCommandError\n   * @throws TypeError\n   */\n  parseBuffer(buffer) {\n    const command = this._getCommandFromBuffer(buffer);\n\n    let bufferOffset = 3;\n\n    for (const arg of command.arguments) {\n      let valueSize = arg.getValueSize();\n      let value = 0;\n\n      switch (arg.type) {\n        case 'u8':\n        case 'u16':\n        case 'u32':\n        case 'u64':\n          value = buffer.readUIntLE(bufferOffset, valueSize);\n          break;\n        case 'i8':\n        case 'i16':\n        case 'i32':\n        case 'i64':\n          value = buffer.readIntLE(bufferOffset, valueSize);\n          break;\n        case 'enum':\n          // @todo figure out why I have to do this\n          value = buffer.readIntLE(bufferOffset + 1, valueSize - 1);\n          break;\n        // eslint-disable-next-line no-case-declarations\n        case 'string':\n          value = '';\n          let c = ''; // Last character\n\n          for (valueSize = 0; valueSize < buffer.length && c !== '\\0'; valueSize++) {\n            c = String.fromCharCode(buffer[bufferOffset]);\n\n            value += c;\n          }\n          break;\n        case 'float':\n          value = buffer.readFloatBE(bufferOffset);\n          break;\n        case 'double':\n          value = buffer.readDoubleLE(bufferOffset);\n          break;\n        default:\n          throw new TypeError(`Can't parse buffer: unknown data type \"${arg.type}\" for argument \"${arg.name}\" in ${command.getToken()}`);\n      }\n\n      arg.value = value;\n\n      bufferOffset += valueSize;\n    }\n\n    return command;\n  }\n\n  /**\n   * Warn up the parser by pre-fetching the xml files\n   * @returns {void}\n   */\n  warmup() {\n    CommandParser._files.forEach(file => this._getXml(file));\n  }\n\n  /**\n   * helper method\n   * @param {Object|undefined} value - Xml node value\n   * @param {string} type - Xml node type\n   * @param {string|number} target - Xml node value\n   * @param {Array<Object|undefined>} context - Parser context\n   * @private\n   * @throws InvalidCommandError\n   * @returns {void}\n   */\n  _assertElementExists(value, type, target, context = []) {\n    if (typeof value === 'undefined') {\n      throw new InvalidCommandError(value, type, target, context);\n    }\n  }\n}\n",
+    "content": "import { parseString } from 'xml2js';\nimport DroneCommand from './DroneCommand';\nimport Logger from 'winston';\nimport InvalidCommandError from './InvalidCommandError';\nimport { getInstalledPathSync as nodePath } from 'get-installed-path';\nimport fs from 'fs';\nimport * as path from 'path';\n\n/**\n * Command parser used for looking up commands in the xml definition\n */\nexport default class CommandParser {\n  /**\n   * CommandParser constructor\n   */\n  constructor() {\n    if (typeof CommandParser._fileCache === 'undefined') {\n      CommandParser._fileCache = {};\n    }\n\n    this._commandCache = {};\n  }\n\n  /**\n   * Get an xml file and convert it to json\n   * @param {string} name - Project name\n   * @returns {Object} - Parsed Xml data using xml2js\n   * @private\n   */\n  _getJson(name) {\n    const file = this._getXml(name);\n\n    if (typeof file === 'undefined') {\n      throw new Error(`Xml file ${name} could not be found`);\n    }\n\n    if (typeof CommandParser._fileCache[name] === 'undefined') {\n      CommandParser._fileCache[name] = null;\n\n      parseString(file, { async: false }, (e, result) => {\n        CommandParser._fileCache[name] = result;\n      });\n\n      return this._getJson(name);\n    } else if (CommandParser._fileCache[name] === null) {\n      // Fuck javascript async hipster shit\n      return this._getJson(name);\n    }\n\n    return CommandParser._fileCache[name];\n  }\n\n  /**\n   * Get a command based on it's path in the xml definition\n   * @param {string} projectName - The xml file name (project name)\n   * @param {string} className - The command class name\n   * @param {string} commandName - The command name\n   * @param {Object?} commandArguments - Optional command arguments\n   * @returns {DroneCommand} - Target command\n   * @throws InvalidCommandError\n   * @see {@link https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/}\n   * @example\n   * const parser = new CommandParser();\n   * const backFlip = parser.getCommand('minidrone', 'Animations', 'Flip', {direction: 'back'});\n   */\n  getCommand(projectName, className, commandName, commandArguments = {}) {\n    const cacheToken = [\n      projectName, className,\n      commandName,\n    ].join('-');\n\n    if (typeof this._commandCache[cacheToken] === 'undefined') {\n      const project = this._getJson(projectName).project;\n\n      this._assertElementExists(project, 'project', projectName);\n\n      const context = [projectName];\n\n      const targetClass = project.class.find(v => v.$.name === className);\n\n      this._assertElementExists(targetClass, 'class', className);\n\n      context.push(className);\n\n      const targetCommand = targetClass.cmd.find(v => v.$.name === commandName);\n\n      this._assertElementExists(targetCommand, 'command', commandName);\n\n      const result = new DroneCommand(project, targetClass, targetCommand);\n\n      this._commandCache[cacheToken] = result;\n\n      if (result.deprecated) {\n        Logger.warn(`${result.toString()} has been deprecated`);\n      }\n    }\n\n    const target = this._commandCache[cacheToken].clone();\n\n    for (const arg of Object.keys(commandArguments)) {\n      if (target.hasArgument(arg)) {\n        target[arg] = commandArguments[arg];\n      }\n    }\n\n    return target;\n  }\n\n  /**\n   * Gets the command by analysing the buffer\n   * @param {Buffer} buffer - Command buffer without leading 2 bytes\n   * @returns {DroneCommand} - Buffer's related DroneCommand\n   * @private\n   */\n  _getCommandFromBuffer(buffer) {\n    const projectId = buffer.readUInt8(0);\n    const classId = buffer.readUInt8(1);\n    const commandId = buffer.readUInt8(2);\n\n    const cacheToken = [projectId, classId, commandId].join('-');\n\n    // Build command if needed\n    if (typeof this._commandCache[cacheToken] === 'undefined') {\n      // Find project\n      const project = CommandParser._files\n        .map(x => this._getJson(x).project)\n        .filter(x => typeof x !== 'undefined')\n        .find(x => Number(x.$.id) === projectId);\n\n      this._assertElementExists(project, 'project', projectId);\n\n      // find class\n      const targetClass = project.class.find(x => Number(x.$.id) === classId);\n\n      const context = [project.$.name];\n\n      this._assertElementExists(targetClass, 'class', classId, context);\n\n      // find command\n      const targetCommand = targetClass.cmd.find(x => Number(x.$.id) === commandId);\n\n      context.push(targetClass.$.name);\n\n      this._assertElementExists(targetCommand, 'command', commandId, context);\n\n      // Build command and store it\n      this._commandCache[cacheToken] = new DroneCommand(project, targetClass, targetCommand);\n    }\n\n    return this._commandCache[cacheToken].clone();\n  }\n\n  /**\n   * Parse the input buffer and get the correct command with parameters\n   * Used internally to parse sensor data\n   * @param {Buffer} buffer - The command buffer without the first two bytes\n   * @returns {DroneCommand} - Parsed drone command\n   * @throws InvalidCommandError\n   * @throws TypeError\n   */\n  parseBuffer(buffer) {\n    const command = this._getCommandFromBuffer(buffer);\n\n    let bufferOffset = 3;\n\n    for (const arg of command.arguments) {\n      let valueSize = arg.getValueSize();\n      let value = 0;\n\n      switch (arg.type) {\n        case 'u8':\n        case 'u16':\n        case 'u32':\n        case 'u64':\n          value = buffer.readUIntLE(bufferOffset, valueSize);\n          break;\n        case 'i8':\n        case 'i16':\n        case 'i32':\n        case 'i64':\n          value = buffer.readIntLE(bufferOffset, valueSize);\n          break;\n        case 'enum':\n          // @todo figure out why I have to do this\n          value = buffer.readIntLE(bufferOffset + 1, valueSize - 1);\n          break;\n        // eslint-disable-next-line no-case-declarations\n        case 'string':\n          value = '';\n          let c = ''; // Last character\n\n          for (valueSize = 0; valueSize < buffer.length && c !== '\\0'; valueSize++) {\n            c = String.fromCharCode(buffer[bufferOffset]);\n\n            value += c;\n          }\n          break;\n        case 'float':\n          value = buffer.readFloatBE(bufferOffset);\n          break;\n        case 'double':\n          value = buffer.readDoubleLE(bufferOffset);\n          break;\n        default:\n          throw new TypeError(`Can't parse buffer: unknown data type \"${arg.type}\" for argument \"${arg.name}\" in ${command.getToken()}`);\n      }\n\n      arg.value = value;\n\n      bufferOffset += valueSize;\n    }\n\n    return command;\n  }\n\n  /**\n   * Warn up the parser by pre-fetching the xml files\n   * @param {string[]} files - List of files to load in defaults to {@link CommandParser._files}\n   * @returns {void}\n   *\n   */\n  warmup(files = this.constructor._files) {\n    for (const file of files) {\n      this._getJson(file);\n    }\n  }\n\n  /**\n   * Mapping of known xml files\n   * @type {string[]} - known xml files\n   * @private\n   */\n  static get _files() {\n    if (typeof this.__files === 'undefined') {\n      const arsdkXmlPath = CommandParser._arsdkXmlPath;\n\n      const isFile = path => fs.lstatSync(path).isFile();\n\n      this.__files = fs\n        .readdirSync(arsdkXmlPath)\n        .map(String)\n        .filter(file => file.endsWith('.xml'))\n        .filter(file => isFile(path.join(arsdkXmlPath, file)))\n        .map(file => file.replace('.xml', ''));\n\n      Logger.debug(`_files list found ${this._files.length} items`);\n    }\n\n    return this.__files;\n  }\n\n  /**\n   * helper method\n   * @param {Object|undefined} value - Xml node value\n   * @param {string} type - Xml node type\n   * @param {string|number} target - Xml node value\n   * @param {Array<Object|undefined>} context - Parser context\n   * @private\n   * @throws InvalidCommandError\n   * @returns {void}\n   */\n  _assertElementExists(value, type, target, context = []) {\n    if (typeof value === 'undefined') {\n      throw new InvalidCommandError(value, type, target, context);\n    }\n  }\n\n  /**\n   * Reads xml file from ArSDK synchronously without a cache\n   * @param {string} name - Xml file name\n   * @returns {string} - File contents\n   * @private\n   */\n  _getXml(name) {\n    const arsdkXmlPath = CommandParser._arsdkXmlPath;\n    const filePath = `${arsdkXmlPath}/${name}.xml`;\n\n    return fs.readFileSync(filePath);\n  }\n\n  /**\n   * Path of the ArSDK xml directory\n   * @returns {*|string} - Path\n   * @private\n   */\n  static get _arsdkXmlPath() {\n    if (typeof this.__arsdkPath === 'undefined') {\n      this.__arsdkPath = nodePath('arsdk-xml', { local: true }) + '/xml';\n    }\n\n    return this.__arsdkPath;\n  }\n}\n",
     "static": true,
     "longname": "/Users/shodan/Projects/minidrone-js/src/CommandParser.js",
     "access": "public",
@@ -576,48 +576,6 @@
   },
   {
     "__docId__": 49,
-    "kind": "variable",
-    "name": "_fileCache",
-    "memberof": "src/CommandParser.js",
-    "static": true,
-    "longname": "src/CommandParser.js~_fileCache",
-    "access": "private",
-    "export": false,
-    "importPath": "minidrone-js/src/CommandParser.js",
-    "importStyle": null,
-    "description": null,
-    "lineNumber": 6,
-    "undocument": true,
-    "type": {
-      "types": [
-        "{}"
-      ]
-    },
-    "ignore": true
-  },
-  {
-    "__docId__": 50,
-    "kind": "variable",
-    "name": "_commandCache",
-    "memberof": "src/CommandParser.js",
-    "static": true,
-    "longname": "src/CommandParser.js~_commandCache",
-    "access": "private",
-    "export": false,
-    "importPath": "minidrone-js/src/CommandParser.js",
-    "importStyle": null,
-    "description": null,
-    "lineNumber": 7,
-    "undocument": true,
-    "type": {
-      "types": [
-        "{}"
-      ]
-    },
-    "ignore": true
-  },
-  {
-    "__docId__": 51,
     "kind": "class",
     "name": "CommandParser",
     "memberof": "src/CommandParser.js",
@@ -632,17 +590,47 @@
     "interface": false
   },
   {
-    "__docId__": 52,
-    "kind": "method",
-    "name": "_getXml",
+    "__docId__": 50,
+    "kind": "constructor",
+    "name": "constructor",
     "memberof": "src/CommandParser.js~CommandParser",
     "generator": false,
     "async": false,
     "static": false,
-    "longname": "src/CommandParser.js~CommandParser#_getXml",
+    "longname": "src/CommandParser.js~CommandParser#constructor",
+    "access": "public",
+    "description": "CommandParser constructor",
+    "lineNumber": 16
+  },
+  {
+    "__docId__": 51,
+    "kind": "member",
+    "name": "_commandCache",
+    "memberof": "src/CommandParser.js~CommandParser",
+    "static": false,
+    "longname": "src/CommandParser.js~CommandParser#_commandCache",
+    "access": "private",
+    "description": null,
+    "lineNumber": 21,
+    "undocument": true,
+    "type": {
+      "types": [
+        "{}"
+      ]
+    }
+  },
+  {
+    "__docId__": 52,
+    "kind": "method",
+    "name": "_getJson",
+    "memberof": "src/CommandParser.js~CommandParser",
+    "generator": false,
+    "async": false,
+    "static": false,
+    "longname": "src/CommandParser.js~CommandParser#_getJson",
     "access": "private",
     "description": "Get an xml file and convert it to json",
-    "lineNumber": 19,
+    "lineNumber": 30,
     "unknown": [
       {
         "tagName": "@returns",
@@ -672,70 +660,6 @@
   },
   {
     "__docId__": 53,
-    "kind": "get",
-    "name": "_fileMapping",
-    "memberof": "src/CommandParser.js~CommandParser",
-    "generator": false,
-    "async": false,
-    "static": true,
-    "longname": "src/CommandParser.js~CommandParser._fileMapping",
-    "access": "private",
-    "description": "Used for file loading/lookup",
-    "lineNumber": 47,
-    "unknown": [
-      {
-        "tagName": "@returns",
-        "tagValue": "{{minidrone: string, common: string}} - xml files with contents"
-      }
-    ],
-    "return": {
-      "nullable": null,
-      "types": [
-        "{minidrone: string, common: string}"
-      ],
-      "spread": false,
-      "description": "xml files with contents"
-    },
-    "type": {
-      "types": [
-        "{\"minidrone\": *, \"common\": *}"
-      ]
-    }
-  },
-  {
-    "__docId__": 54,
-    "kind": "get",
-    "name": "_files",
-    "memberof": "src/CommandParser.js~CommandParser",
-    "generator": false,
-    "async": false,
-    "static": true,
-    "longname": "src/CommandParser.js~CommandParser._files",
-    "access": "private",
-    "description": "Get a list of available files",
-    "lineNumber": 59,
-    "unknown": [
-      {
-        "tagName": "@returns",
-        "tagValue": "{string[]} - Available files"
-      }
-    ],
-    "return": {
-      "nullable": null,
-      "types": [
-        "string[]"
-      ],
-      "spread": false,
-      "description": "Available files"
-    },
-    "type": {
-      "types": [
-        "*"
-      ]
-    }
-  },
-  {
-    "__docId__": 55,
     "kind": "method",
     "name": "getCommand",
     "memberof": "src/CommandParser.js~CommandParser",
@@ -751,7 +675,7 @@
     "see": [
       "{@link https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/}"
     ],
-    "lineNumber": 76,
+    "lineNumber": 66,
     "unknown": [
       {
         "tagName": "@returns",
@@ -818,7 +742,7 @@
     ]
   },
   {
-    "__docId__": 56,
+    "__docId__": 54,
     "kind": "method",
     "name": "_getCommandFromBuffer",
     "memberof": "src/CommandParser.js~CommandParser",
@@ -828,7 +752,7 @@
     "longname": "src/CommandParser.js~CommandParser#_getCommandFromBuffer",
     "access": "private",
     "description": "Gets the command by analysing the buffer",
-    "lineNumber": 125,
+    "lineNumber": 115,
     "unknown": [
       {
         "tagName": "@returns",
@@ -857,7 +781,7 @@
     }
   },
   {
-    "__docId__": 57,
+    "__docId__": 55,
     "kind": "method",
     "name": "parseBuffer",
     "memberof": "src/CommandParser.js~CommandParser",
@@ -867,7 +791,7 @@
     "longname": "src/CommandParser.js~CommandParser#parseBuffer",
     "access": "public",
     "description": "Parse the input buffer and get the correct command with parameters\nUsed internally to parse sensor data",
-    "lineNumber": 170,
+    "lineNumber": 161,
     "unknown": [
       {
         "tagName": "@returns",
@@ -910,7 +834,7 @@
     ]
   },
   {
-    "__docId__": 58,
+    "__docId__": 56,
     "kind": "method",
     "name": "warmup",
     "memberof": "src/CommandParser.js~CommandParser",
@@ -920,11 +844,23 @@
     "longname": "src/CommandParser.js~CommandParser#warmup",
     "access": "public",
     "description": "Warn up the parser by pre-fetching the xml files",
-    "lineNumber": 229,
+    "lineNumber": 222,
     "unknown": [
       {
         "tagName": "@returns",
         "tagValue": "{void}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "string[]"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "files",
+        "description": "List of files to load in defaults to {@link CommandParser._files}"
       }
     ],
     "return": {
@@ -934,8 +870,45 @@
       ],
       "spread": false,
       "description": ""
-    },
-    "params": []
+    }
+  },
+  {
+    "__docId__": 57,
+    "kind": "get",
+    "name": "_files",
+    "memberof": "src/CommandParser.js~CommandParser",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/CommandParser.js~CommandParser._files",
+    "access": "private",
+    "description": "Mapping of known xml files",
+    "lineNumber": 233,
+    "type": {
+      "nullable": null,
+      "types": [
+        "string[]"
+      ],
+      "spread": false,
+      "description": null
+    }
+  },
+  {
+    "__docId__": 58,
+    "kind": "member",
+    "name": "__files",
+    "memberof": "src/CommandParser.js~CommandParser",
+    "static": true,
+    "longname": "src/CommandParser.js~CommandParser.__files",
+    "access": "private",
+    "description": null,
+    "lineNumber": 239,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
   },
   {
     "__docId__": 59,
@@ -948,7 +921,7 @@
     "longname": "src/CommandParser.js~CommandParser#_assertElementExists",
     "access": "private",
     "description": "helper method",
-    "lineNumber": 243,
+    "lineNumber": 262,
     "unknown": [
       {
         "tagName": "@returns",
@@ -1018,6 +991,95 @@
   },
   {
     "__docId__": 60,
+    "kind": "method",
+    "name": "_getXml",
+    "memberof": "src/CommandParser.js~CommandParser",
+    "generator": false,
+    "async": false,
+    "static": false,
+    "longname": "src/CommandParser.js~CommandParser#_getXml",
+    "access": "private",
+    "description": "Reads xml file from ArSDK synchronously without a cache",
+    "lineNumber": 274,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{string} - File contents"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "name",
+        "description": "Xml file name"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "string"
+      ],
+      "spread": false,
+      "description": "File contents"
+    }
+  },
+  {
+    "__docId__": 61,
+    "kind": "get",
+    "name": "_arsdkXmlPath",
+    "memberof": "src/CommandParser.js~CommandParser",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/CommandParser.js~CommandParser._arsdkXmlPath",
+    "access": "private",
+    "description": "Path of the ArSDK xml directory",
+    "lineNumber": 286,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{*|string} - Path"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "*",
+        "string"
+      ],
+      "spread": false,
+      "description": "Path"
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 62,
+    "kind": "member",
+    "name": "__arsdkPath",
+    "memberof": "src/CommandParser.js~CommandParser",
+    "static": true,
+    "longname": "src/CommandParser.js~CommandParser.__arsdkPath",
+    "access": "private",
+    "description": null,
+    "lineNumber": 288,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 63,
     "kind": "file",
     "name": "src/DroneCommand.js",
     "content": "import DroneCommandArgument from './DroneCommandArgument';\nimport Enum from './util/Enum';\n\nconst bufferType = new Enum({\n  ACK: 0x02, // Acknowledgment of previously received data\n  DATA: 0x02, // Normal data (no ack requested)\n  NON_ACK: 0x02, // Same as DATA\n  HIGH_PRIO: 0x02, // Not sure about this one could be LLD\n  LOW_LATENCY_DATA: 0x03, // Treated as normal data on the network, but are given higher priority internally\n  DATA_WITH_ACK: 0x04, // Data requesting an ack. The receiver must send an ack for this data unit!\n});\n\nconst bufferCharTranslationMap = {\n  ACK: 'ACK_COMMAND',\n  DATA: 'SEND_NO_ACK',\n  NON_ACK: 'SEND_NO_ACK',\n  HIGH_PRIO: 'SEND_HIGH_PRIORITY',\n  LOW_LATENCY_DATA: 'SEND_NO_ACK',\n  DATA_WITH_ACK: 'SEND_WITH_ACK',\n};\n\n// the following characteristic UUID segments come from the documentation at\n// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3\n// the 4th bytes are used to identify the characteristic\n// the usage of the channels are also documented here\n// http://forum.developer.parrot.com/t/ble-characteristics-of-minidrones/5912/2\nconst characteristicSendUuids = new Enum({\n  SEND_NO_ACK: '0a', // not-ack commands (PCMD only)\n  SEND_WITH_ACK: '0b', // ack commands (all piloting commands)\n  SEND_HIGH_PRIORITY: '0c', // emergency commands\n  ACK_COMMAND: '1e', // ack for data sent on 0e\n});\n\n/**\n * Drone command\n *\n * Used for building commands to be sent to the drone. It\n * is also used for the sensor readings.\n *\n * Arguments are automatically mapped on the object. This\n * means that it is easy to set command arguments. Default\n * arguments values are 0 or their enum equivalent by default.\n *\n * @example\n * const parser = new CommandParser();\n * const backFlip = parser.getCommand('minidrone', 'Animations', 'Flip', {direction: 'back'});\n * const frontFlip = backFlip.clone();\n *\n * backFlip.direction = 'front';\n *\n * drone.runCommand(backFlip);\n */\nexport default class DroneCommand {\n  /**\n   * Creates a new DroneCommand instance\n   * @param {object} project - Project node from the xml spec\n   * @param {object} class_ - Class node from the xml spec\n   * @param {object} command - Command node from the xml spec\n   */\n  constructor(project, class_, command) {\n    this._project = project;\n    this._projectId = Number(project.$.id);\n    this._projectName = String(project.$.name);\n\n    this._class = class_;\n    this._classId = Number(class_.$.id);\n    this._className = String(class_.$.name);\n\n    this._command = command;\n    this._commandId = Number(command.$.id);\n    this._commandName = String(command.$.name);\n\n    this._deprecated = command.$.deprecated === 'true';\n    this._description = String(command._).trim();\n    this._arguments = (command.arg || []).map(x => new DroneCommandArgument(x));\n\n    // NON_ACK, ACK or HIGH_PRIO. Defaults to ACK\n    this._buffer = command.$.buffer || 'DATA_WITH_ACK';\n\n    this._mapArguments();\n  }\n\n  /**\n   * The project id\n   * @returns {number}\n   */\n  get projectId() {\n    return this._projectId;\n  }\n\n  /**\n   * The project name (minidrone, common, etc)\n   * @returns {string}\n   */\n  get projectName() {\n    return this._projectName;\n  }\n\n  /**\n   * The class id\n   * @returns {number}\n   */\n  get classId() {\n    return this._classId;\n  }\n\n  /**\n   * The class name\n   * @returns {string}\n   */\n  get className() {\n    return this._className;\n  }\n\n  /**\n   * The command id\n   * @returns {number}\n   */\n  get commandId() {\n    return this._commandId;\n  }\n\n  /**\n   * The command name\n   * @returns {string}\n   */\n  get commandName() {\n    return this._commandName;\n  }\n\n  /**\n   * Array containing the drone arguments\n   * @returns {DroneCommandArgument[]}\n   */\n  get arguments() {\n    return this._arguments;\n  }\n\n  /**\n   * Returns if the command has any arguments\n   * @returns {boolean}\n   */\n  hasArguments() {\n    return this.arguments.length > 0;\n  }\n\n  /**\n   * Get the argument names. These names are also mapped to the instance\n   * @returns {string[]}\n   */\n  get argumentNames() {\n    return this.arguments.map(x => x.name);\n  }\n\n  /**\n   * Get the command description\n   * @returns {string}\n   */\n  get description() {\n    return this._description;\n  }\n\n  /**\n   * Get if the command has been deprecated\n   * @returns {boolean}\n   */\n  get deprecated() {\n    return this._deprecated;\n  }\n\n  /**\n   * Get the send characteristic uuid based on the buffer type\n   * @returns {string}\n   */\n  get sendCharacteristicUuid() {\n    const t = bufferCharTranslationMap[this.bufferType] || 'SEND_WITH_ACK';\n\n    return 'fa' + characteristicSendUuids[t];\n  }\n\n  /**\n   * Checks if the command has a certain argument\n   * @param {string} key - Argument name\n   * @returns {boolean} - If the argument exists\n   */\n  hasArgument(key) {\n    return this.arguments.findIndex(x => x.name === key) !== -1;\n  }\n\n  /**\n   * Clones the instance\n   * @returns {DroneCommand}\n   */\n  clone() {\n    return new this.constructor(this._project, this._class, this._command);\n  }\n\n  /**\n   * Converts the command to it's buffer representation\n   * @returns {Buffer} - Command buffer\n   * @todo don't fill in message id but use the first byte of the buffer to look up the current step in the connection handler\n   * @throws TypeError\n   */\n  toBuffer() {\n    const bufferLength = 6 + this.arguments.reduce((acc, val) => val.getValueSize() + acc, 0);\n    const buffer = new Buffer(bufferLength);\n\n    buffer.fill(0);\n\n    buffer.writeUInt16LE(this.bufferFlag, 0);\n\n    // Skip command counter (offset 1) because it's set in DroneConnection::runCommand\n\n    buffer.writeUInt16LE(this.projectId, 2);\n    buffer.writeUInt16LE(this.classId, 3);\n    buffer.writeUInt16LE(this.commandId, 4); // two bytes\n\n    let bufferOffset = 6;\n\n    for (const arg of this.arguments) {\n      const valueSize = arg.getValueSize();\n\n      switch (arg.type) {\n        case 'u8':\n        case 'u16':\n        case 'u32':\n        case 'u64':\n          buffer.writeUIntLE(Math.floor(arg.value), bufferOffset, valueSize);\n          break;\n        case 'i8':\n        case 'i16':\n        case 'i32':\n        case 'i64':\n        case 'enum':\n          buffer.writeIntLE(Math.floor(arg.value), bufferOffset, valueSize);\n          break;\n        case 'string':\n          buffer.write(arg.value, bufferOffset, valueSize, 'ascii');\n          break;\n        case 'float':\n          buffer.writeFloatLE(arg.value, bufferOffset);\n          break;\n        case 'double':\n          buffer.writeDoubleLE(arg.value, bufferOffset);\n          break;\n        default:\n          throw new TypeError(`Can't encode buffer: unknown data type \"${arg.type}\" for argument \"${arg.name}\" in ${this.getToken()}`);\n      }\n\n      bufferOffset += valueSize;\n    }\n\n    return buffer;\n  }\n\n  /**\n   * Maps the arguments to the class\n   * @returns {void}\n   * @private\n   */\n  _mapArguments() {\n    for (const arg of this.arguments) {\n      const init = {\n        enumerable: false,\n        get: () => arg,\n        set: v => {\n          arg.value = v;\n        },\n      };\n\n      Object.defineProperty(this, arg.name, init);\n    }\n  }\n\n  /**\n   * Returns a string representation of a DroneCommand\n   * @param {boolean} debug - If extra debug information should be shown\n   * @returns {string} - String representation if the instance\n   * @example\n   * const str = command.toString();\n   *\n   * str === 'minidrone PilotingSettingsState PreferredPilotingModeChanged mode=\"medium\"(1)';\n   */\n  toString(debug = false) {\n    const argStr = this.arguments.map(x => x.toString(debug)).join(' ').trim();\n\n    return (this.getToken() + ' ' + argStr).trim();\n  }\n\n  /**\n   * Get the command buffer type\n   * @returns {string}\n   */\n  get bufferType() {\n    return this._buffer.toUpperCase();\n  }\n\n  /**\n   * Get the command buffer flag based on it's type\n   * @returns {number}\n   */\n  get bufferFlag() {\n    return bufferType[this.bufferType];\n  }\n\n  /**\n   * Get the token representation of the command. This\n   * is useful for registering sensors for example\n   * @returns {string}\n   * @example\n   * const backFlip = parser.getCommand('minidrone', 'Animations', 'Flip', {direction: 'back'});\n   *\n   * backFlip.getToken() === 'minidrone-Animations-Flip';\n   */\n  getToken() {\n    return [this.projectName, this.className, this.commandName].join('-');\n  }\n}\n",
@@ -1028,7 +1090,7 @@
     "lineNumber": 1
   },
   {
-    "__docId__": 61,
+    "__docId__": 64,
     "kind": "variable",
     "name": "bufferType",
     "memberof": "src/DroneCommand.js",
@@ -1049,7 +1111,7 @@
     "ignore": true
   },
   {
-    "__docId__": 62,
+    "__docId__": 65,
     "kind": "variable",
     "name": "bufferCharTranslationMap",
     "memberof": "src/DroneCommand.js",
@@ -1070,7 +1132,7 @@
     "ignore": true
   },
   {
-    "__docId__": 63,
+    "__docId__": 66,
     "kind": "variable",
     "name": "characteristicSendUuids",
     "memberof": "src/DroneCommand.js",
@@ -1091,7 +1153,7 @@
     "ignore": true
   },
   {
-    "__docId__": 64,
+    "__docId__": 67,
     "kind": "class",
     "name": "DroneCommand",
     "memberof": "src/DroneCommand.js",
@@ -1109,7 +1171,7 @@
     "interface": false
   },
   {
-    "__docId__": 65,
+    "__docId__": 68,
     "kind": "constructor",
     "name": "constructor",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1154,7 +1216,7 @@
     ]
   },
   {
-    "__docId__": 66,
+    "__docId__": 69,
     "kind": "member",
     "name": "_project",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1171,7 +1233,7 @@
     }
   },
   {
-    "__docId__": 67,
+    "__docId__": 70,
     "kind": "member",
     "name": "_projectId",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1188,7 +1250,7 @@
     }
   },
   {
-    "__docId__": 68,
+    "__docId__": 71,
     "kind": "member",
     "name": "_projectName",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1205,7 +1267,7 @@
     }
   },
   {
-    "__docId__": 69,
+    "__docId__": 72,
     "kind": "member",
     "name": "_class",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1222,7 +1284,7 @@
     }
   },
   {
-    "__docId__": 70,
+    "__docId__": 73,
     "kind": "member",
     "name": "_classId",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1239,7 +1301,7 @@
     }
   },
   {
-    "__docId__": 71,
+    "__docId__": 74,
     "kind": "member",
     "name": "_className",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1256,7 +1318,7 @@
     }
   },
   {
-    "__docId__": 72,
+    "__docId__": 75,
     "kind": "member",
     "name": "_command",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1273,7 +1335,7 @@
     }
   },
   {
-    "__docId__": 73,
+    "__docId__": 76,
     "kind": "member",
     "name": "_commandId",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1290,7 +1352,7 @@
     }
   },
   {
-    "__docId__": 74,
+    "__docId__": 77,
     "kind": "member",
     "name": "_commandName",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1307,7 +1369,7 @@
     }
   },
   {
-    "__docId__": 75,
+    "__docId__": 78,
     "kind": "member",
     "name": "_deprecated",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1324,7 +1386,7 @@
     }
   },
   {
-    "__docId__": 76,
+    "__docId__": 79,
     "kind": "member",
     "name": "_description",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1341,7 +1403,7 @@
     }
   },
   {
-    "__docId__": 77,
+    "__docId__": 80,
     "kind": "member",
     "name": "_arguments",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1358,7 +1420,7 @@
     }
   },
   {
-    "__docId__": 78,
+    "__docId__": 81,
     "kind": "member",
     "name": "_buffer",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1375,7 +1437,7 @@
     }
   },
   {
-    "__docId__": 79,
+    "__docId__": 82,
     "kind": "get",
     "name": "projectId",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1407,7 +1469,7 @@
     }
   },
   {
-    "__docId__": 80,
+    "__docId__": 83,
     "kind": "get",
     "name": "projectName",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1439,7 +1501,7 @@
     }
   },
   {
-    "__docId__": 81,
+    "__docId__": 84,
     "kind": "get",
     "name": "classId",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1471,7 +1533,7 @@
     }
   },
   {
-    "__docId__": 82,
+    "__docId__": 85,
     "kind": "get",
     "name": "className",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1503,7 +1565,7 @@
     }
   },
   {
-    "__docId__": 83,
+    "__docId__": 86,
     "kind": "get",
     "name": "commandId",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1535,7 +1597,7 @@
     }
   },
   {
-    "__docId__": 84,
+    "__docId__": 87,
     "kind": "get",
     "name": "commandName",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1567,7 +1629,7 @@
     }
   },
   {
-    "__docId__": 85,
+    "__docId__": 88,
     "kind": "get",
     "name": "arguments",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1599,7 +1661,7 @@
     }
   },
   {
-    "__docId__": 86,
+    "__docId__": 89,
     "kind": "method",
     "name": "hasArguments",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1627,7 +1689,7 @@
     "params": []
   },
   {
-    "__docId__": 87,
+    "__docId__": 90,
     "kind": "get",
     "name": "argumentNames",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1659,7 +1721,7 @@
     }
   },
   {
-    "__docId__": 88,
+    "__docId__": 91,
     "kind": "get",
     "name": "description",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1691,7 +1753,7 @@
     }
   },
   {
-    "__docId__": 89,
+    "__docId__": 92,
     "kind": "get",
     "name": "deprecated",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1723,7 +1785,7 @@
     }
   },
   {
-    "__docId__": 90,
+    "__docId__": 93,
     "kind": "get",
     "name": "sendCharacteristicUuid",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1755,7 +1817,7 @@
     }
   },
   {
-    "__docId__": 91,
+    "__docId__": 94,
     "kind": "method",
     "name": "hasArgument",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1794,7 +1856,7 @@
     }
   },
   {
-    "__docId__": 92,
+    "__docId__": 95,
     "kind": "method",
     "name": "clone",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1822,7 +1884,7 @@
     "params": []
   },
   {
-    "__docId__": 93,
+    "__docId__": 96,
     "kind": "method",
     "name": "toBuffer",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1861,7 +1923,7 @@
     "params": []
   },
   {
-    "__docId__": 94,
+    "__docId__": 97,
     "kind": "method",
     "name": "_mapArguments",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1889,7 +1951,7 @@
     "params": []
   },
   {
-    "__docId__": 95,
+    "__docId__": 98,
     "kind": "method",
     "name": "toString",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1931,7 +1993,7 @@
     }
   },
   {
-    "__docId__": 96,
+    "__docId__": 99,
     "kind": "get",
     "name": "bufferType",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1963,7 +2025,7 @@
     }
   },
   {
-    "__docId__": 97,
+    "__docId__": 100,
     "kind": "get",
     "name": "bufferFlag",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -1995,7 +2057,7 @@
     }
   },
   {
-    "__docId__": 98,
+    "__docId__": 101,
     "kind": "method",
     "name": "getToken",
     "memberof": "src/DroneCommand.js~DroneCommand",
@@ -2026,10 +2088,10 @@
     "params": []
   },
   {
-    "__docId__": 99,
+    "__docId__": 102,
     "kind": "file",
     "name": "src/DroneCommandArgument.js",
-    "content": "import Enum from './util/Enum';\n\n/**\n * Drone Command Argument class\n *\n * Used for storing command arguments\n *\n * @property {Enum|undefined} enum - Enum store containing possible enum values if `this.type === 'enum'`. If set then `this.hasEnumProperty === true`.\n */\nexport default class DroneCommandArgument {\n  /**\n   * Command argument constructor\n   * @param {object} raw - Raw command argument data from the xml specification\n   */\n  constructor(raw) {\n    this._name = raw.$.name;\n    this._description = String(raw._).trim();\n    this._type = raw.$.type;\n    this._value = this.type === 'string' ? '' : 0;\n\n    // Parse enum if needed\n    if (this.type === 'enum') {\n      const enumData = {};\n      let enumValue = 0;\n\n      for (const option of raw.enum) {\n        const enumName = option.$.name;\n\n        enumData[enumName] = enumValue++;\n      }\n\n      this._enum = new Enum(enumData);\n\n      Object.defineProperty(this, 'enum', {\n        enumerable: false,\n        get: () => this._enum,\n      });\n    }\n  }\n\n  /**\n   * Parameter name\n   * @returns {string}\n   */\n  get name() {\n    return this._name;\n  }\n\n  /**\n   * Parameter description\n   * @returns {string}\n   */\n  get description() {\n    return this._description;\n  }\n\n  /**\n   * Parameter type\n   * @returns {string}\n   */\n  get type() {\n    return this._type;\n  }\n\n  /**\n   * Get the parameter value\n   * @returns {number|string}\n   * @see DroneCommandArgument#type\n   */\n  get value() {\n    if (this.type === 'string' && !this._value.endsWith('\\0')) {\n      return this._value + '\\0';\n    } else if (this.type === 'float') {\n      return Math.fround(this._value);\n\n      /**\n       * Javascript uses doubles by default not fixed\n       * precision or decimals. This means that we can\n       * just return the value without rounding it.\n       */\n    }\n\n    return this._value;\n  }\n\n  /**\n   * Set the parameter value\n   * @param {number|string} value - Parameter value\n   * @throws TypeError\n   */\n  set value(value) {\n    if (Object.is(value, -0)) {\n      value = 0;\n    }\n\n    this._value = this._parseValue(value);\n  }\n\n  /**\n   * If it has the enum property set\n   * @returns {boolean}\n   */\n  get hasEnumProperty() {\n    return typeof this.enum !== 'undefined';\n  }\n\n  /**\n   * Parses the value before setting it\n   * @param {number|string} value - Target value\n   * @returns {number|string}\n   * @private\n   * @throws TypeError\n   */\n  _parseValue(value) {\n    switch (this.type) {\n      case 'enum':\n        if (this.enum.hasKey(value)) {\n          return this.enum[value];\n        } else if (this.enum.hasValue(value)) {\n          return value;\n          // } else if (value === 256) {\n          //   // This is some BS value I sometimes get from the drone\n          //   // Pretty much just means \"unavailable\"\n          //   return value;\n        }\n\n        throw new TypeError(`Value ${value} could not be interpreted as an enum value for ${this.name}. Available options are ${this.enum.toString()}`);\n      case 'string':\n        return String(value);\n    }\n\n    // Default behavior\n    return Number(value);\n  }\n\n  /**\n   * Gets the byte size of the value.\n   * @returns {number}\n   */\n  getValueSize() {\n    switch (this.type) {\n      case 'string':\n        return this.value.length;\n      case 'u8':\n      case 'i8':\n        return 1;\n      case 'u16':\n      case 'i16':\n        return 2;\n      case 'u32':\n      case 'i32':\n        return 4;\n      case 'u64':\n      case 'i64':\n        return 8;\n      case 'float':\n        return 4;\n      case 'double':\n        return 8;\n      case 'enum':\n        return 4;\n    }\n\n    return 0;\n  }\n\n  /**\n   * Returns a string representation of the DroneCommandArgument instance\n   * @param {boolean} debug - If extra debug info should be shown.\n   * @param {number} precision - Amount of precision for numerical values\n   * @returns {string}\n   */\n  toString(debug = false, precision = 3) {\n    let value;\n\n    switch (this.type) {\n      case 'string':\n        value = this.value;\n\n        while (value.endsWith('\\0')) {\n          value = value.substring(0, value.length - 1);\n        }\n\n        value = `\"${value}\"`;\n        break;\n      case 'u8':\n      case 'i8':\n      case 'u16':\n      case 'i16':\n      case 'u32':\n      case 'i32':\n      case 'u64':\n      case 'i64':\n        value = this.value;\n        break;\n      case 'float':\n      case 'double':\n        value = this.value.toFixed(precision);\n        break;\n      case 'enum':\n        value = `\"${this.enum.findForValue(this.value)}\"[${this.value}]`;\n        break;\n    }\n\n    if (!debug) {\n      return `${this.name}=${value}`;\n    }\n\n    return `(${this.type})${this.name}=${value}`;\n  }\n}\n",
+    "content": "import Enum from './util/Enum';\n\n/**\n * Drone Command Argument class\n *\n * Used for storing command arguments\n *\n * @property {Enum|undefined} enum - Enum store containing possible enum values if `this.type === 'enum'`. If set then `this.hasEnumProperty === true`.\n */\nexport default class DroneCommandArgument {\n  /**\n   * Command argument constructor\n   * @param {object} raw - Raw command argument data from the xml specification\n   */\n  constructor(raw) {\n    this._name = raw.$.name;\n    this._description = String(raw._).trim();\n    this._type = raw.$.type;\n    this._value = this.type === 'string' ? '' : 0;\n\n    // Parse enum if needed\n    if (this.type === 'enum') {\n      const enumData = {};\n      let enumValue = 0;\n\n      for (const option of raw.enum) {\n        const enumName = option.$.name;\n\n        enumData[enumName] = enumValue++;\n      }\n\n      this._enum = new Enum(enumData);\n\n      Object.defineProperty(this, 'enum', {\n        enumerable: false,\n        get: () => this._enum,\n      });\n    }\n  }\n\n  /**\n   * Parameter name\n   * @returns {string}\n   */\n  get name() {\n    return this._name;\n  }\n\n  /**\n   * Parameter description\n   * @returns {string}\n   */\n  get description() {\n    return this._description;\n  }\n\n  /**\n   * Parameter type\n   * @returns {string}\n   */\n  get type() {\n    return this._type;\n  }\n\n  /**\n   * Get the parameter value\n   * @returns {number|string}\n   * @see DroneCommandArgument#type\n   */\n  get value() {\n    if (this.type === 'string' && !this._value.endsWith('\\0')) {\n      return this._value + '\\0';\n    } else if (this.type === 'float') {\n      return Math.fround(this._value);\n\n      /**\n       * Javascript uses doubles by default not fixed\n       * precision or decimals. This means that we can\n       * just return the value without rounding it.\n       */\n    }\n\n    return this._value;\n  }\n\n  /**\n   * Set the parameter value\n   * @param {number|string} value - Parameter value\n   * @throws TypeError\n   */\n  set value(value) {\n    if (Object.is(value, -0)) {\n      value = 0;\n    }\n\n    this._value = this._parseValue(value);\n  }\n\n  /**\n   * If it has the enum property set\n   * @returns {boolean}\n   */\n  get hasEnumProperty() {\n    return typeof this.enum !== 'undefined';\n  }\n\n  /**\n   * Parses the value before setting it\n   * @param {number|string} value - Target value\n   * @returns {number|string}\n   * @private\n   * @throws TypeError\n   */\n  _parseValue(value) {\n    switch (this.type) {\n      case 'enum':\n        if (this.enum.hasKey(value)) {\n          return this.enum[value];\n        } else if (this.enum.hasValue(value)) {\n          return value;\n          // } else if (value === 256) {\n          //   // This is some BS value I sometimes get from the drone\n          //   // Pretty much just means \"unavailable\"\n          //   return value;\n        }\n\n        throw new TypeError(`Value ${value} could not be interpreted as an enum value for ${this.name}. Available options are ${this.enum.toString()}`);\n      case 'string':\n        return String(value);\n    }\n\n    // Default behavior\n    return Number(value);\n  }\n\n  /**\n   * Gets the byte size of the value.\n   * @returns {number}\n   */\n  getValueSize() {\n    switch (this.type) {\n      case 'string':\n        return this.value.length;\n      case 'u8':\n      case 'i8':\n        return 1;\n      case 'u16':\n      case 'i16':\n        return 2;\n      case 'u32':\n      case 'i32':\n        return 4;\n      case 'u64':\n      case 'i64':\n        return 8;\n      case 'float':\n        return 4;\n      case 'double':\n        return 8;\n      case 'enum':\n        return 4;\n    }\n\n    return 0;\n  }\n\n  /**\n   * Returns a string representation of the DroneCommandArgument instance\n   * @param {boolean} debug - If extra debug info should be shown.\n   * @param {number} precision - Amount of precision for numerical values\n   * @returns {string}\n   */\n  toString(debug = false, precision = 3) {\n    let value;\n\n    switch (this.type) {\n      case 'string':\n        value = this.value;\n\n        while (value.endsWith('\\0')) {\n          value = value.substring(0, value.length - 1);\n        }\n\n        value = `\"${value}\"`;\n        break;\n      case 'u8':\n      case 'i8':\n      case 'u16':\n      case 'i16':\n      case 'u32':\n      case 'i32':\n      case 'u64':\n      case 'i64':\n        value = this.value;\n        break;\n      case 'float':\n      case 'double':\n        // This will provide a reasonable estimate of the\n        // floating point value for debugging purposes.\n        value = this.value.toFixed(precision).replace(/0+$/, '');\n        break;\n      case 'enum':\n        value = `\"${this.enum.findForValue(this.value)}\"[${this.value}]`;\n        break;\n    }\n\n    if (!debug) {\n      return `${this.name}=${value}`;\n    }\n\n    return `(${this.type})${this.name}=${value}`;\n  }\n}\n",
     "static": true,
     "longname": "/Users/shodan/Projects/minidrone-js/src/DroneCommandArgument.js",
     "access": "public",
@@ -2037,7 +2099,7 @@
     "lineNumber": 1
   },
   {
-    "__docId__": 100,
+    "__docId__": 103,
     "kind": "class",
     "name": "DroneCommandArgument",
     "memberof": "src/DroneCommandArgument.js",
@@ -2065,7 +2127,7 @@
     "interface": false
   },
   {
-    "__docId__": 101,
+    "__docId__": 104,
     "kind": "constructor",
     "name": "constructor",
     "memberof": "src/DroneCommandArgument.js~DroneCommandArgument",
@@ -2090,7 +2152,7 @@
     ]
   },
   {
-    "__docId__": 102,
+    "__docId__": 105,
     "kind": "member",
     "name": "_name",
     "memberof": "src/DroneCommandArgument.js~DroneCommandArgument",
@@ -2107,7 +2169,7 @@
     }
   },
   {
-    "__docId__": 103,
+    "__docId__": 106,
     "kind": "member",
     "name": "_description",
     "memberof": "src/DroneCommandArgument.js~DroneCommandArgument",
@@ -2124,7 +2186,7 @@
     }
   },
   {
-    "__docId__": 104,
+    "__docId__": 107,
     "kind": "member",
     "name": "_type",
     "memberof": "src/DroneCommandArgument.js~DroneCommandArgument",
@@ -2141,7 +2203,7 @@
     }
   },
   {
-    "__docId__": 105,
+    "__docId__": 108,
     "kind": "member",
     "name": "_value",
     "memberof": "src/DroneCommandArgument.js~DroneCommandArgument",
@@ -2158,7 +2220,7 @@
     }
   },
   {
-    "__docId__": 106,
+    "__docId__": 109,
     "kind": "member",
     "name": "_enum",
     "memberof": "src/DroneCommandArgument.js~DroneCommandArgument",
@@ -2175,7 +2237,7 @@
     }
   },
   {
-    "__docId__": 107,
+    "__docId__": 110,
     "kind": "get",
     "name": "name",
     "memberof": "src/DroneCommandArgument.js~DroneCommandArgument",
@@ -2207,7 +2269,7 @@
     }
   },
   {
-    "__docId__": 108,
+    "__docId__": 111,
     "kind": "get",
     "name": "description",
     "memberof": "src/DroneCommandArgument.js~DroneCommandArgument",
@@ -2239,7 +2301,7 @@
     }
   },
   {
-    "__docId__": 109,
+    "__docId__": 112,
     "kind": "get",
     "name": "type",
     "memberof": "src/DroneCommandArgument.js~DroneCommandArgument",
@@ -2271,7 +2333,7 @@
     }
   },
   {
-    "__docId__": 110,
+    "__docId__": 113,
     "kind": "get",
     "name": "value",
     "memberof": "src/DroneCommandArgument.js~DroneCommandArgument",
@@ -2307,7 +2369,7 @@
     }
   },
   {
-    "__docId__": 111,
+    "__docId__": 114,
     "kind": "set",
     "name": "value",
     "memberof": "src/DroneCommandArgument.js~DroneCommandArgument",
@@ -2341,7 +2403,7 @@
     ]
   },
   {
-    "__docId__": 113,
+    "__docId__": 116,
     "kind": "get",
     "name": "hasEnumProperty",
     "memberof": "src/DroneCommandArgument.js~DroneCommandArgument",
@@ -2373,7 +2435,7 @@
     }
   },
   {
-    "__docId__": 114,
+    "__docId__": 117,
     "kind": "method",
     "name": "_parseValue",
     "memberof": "src/DroneCommandArgument.js~DroneCommandArgument",
@@ -2422,7 +2484,7 @@
     ]
   },
   {
-    "__docId__": 115,
+    "__docId__": 118,
     "kind": "method",
     "name": "getValueSize",
     "memberof": "src/DroneCommandArgument.js~DroneCommandArgument",
@@ -2450,7 +2512,7 @@
     "params": []
   },
   {
-    "__docId__": 116,
+    "__docId__": 119,
     "kind": "method",
     "name": "toString",
     "memberof": "src/DroneCommandArgument.js~DroneCommandArgument",
@@ -2499,10 +2561,10 @@
     }
   },
   {
-    "__docId__": 117,
+    "__docId__": 120,
     "kind": "file",
     "name": "src/DroneConnection.js",
-    "content": "import EventEmitter from 'events';\nimport Logger from 'winston';\nimport Enum from './util/Enum';\nimport CommandParser from './CommandParser';\n\nconst MANUFACTURER_SERIALS = ['4300cf1900090100', '4300cf1909090100', '4300cf1907090100'];\nconst DRONE_PREFIXES = ['RS_', 'Mars_', 'Travis_', 'Maclan_', 'Mambo_', 'Blaze_', 'NewZ_'];\n\n// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3\nconst handshakeUuids = [\n  'fb0f', 'fb0e', 'fb1b', 'fb1c',\n  'fd22', 'fd23', 'fd24', 'fd52',\n  'fd53', 'fd54',\n];\n\n// the following UUID segments come from the Mambo and from the documenation at\n// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3\n// the 3rd and 4th bytes are used to identify the service\nconst serviceUuids = {\n  'fa': 'ARCOMMAND_SENDING_SERVICE',\n  'fb': 'ARCOMMAND_RECEIVING_SERVICE',\n  'fc': 'PERFORMANCE_COUNTER_SERVICE',\n  'fd21': 'NORMAL_BLE_FTP_SERVICE',\n  'fd51': 'UPDATE_BLE_FTP',\n  'fe00': 'UPDATE_RFCOMM_SERVICE',\n  '1800': 'Device Info',\n  '1801': 'unknown',\n};\n\n// the following characteristic UUID segments come from the documentation at\n// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3\n// the 4th bytes are used to identify the characteristic\n// the types of commands and data coming back are also documented here\n// http://forum.developer.parrot.com/t/ble-characteristics-of-minidrones/5912/2\nconst characteristicReceiveUuids = new Enum({\n  'ACK_DRONE_DATA': '0e', // drone data that needs an ack (needs to be ack on 1e)\n  'NO_ACK_DRONE_DATA': '0f', // data from drone (including battery and others), no ack\n  'ACK_COMMAND_SENT': '1b', // ack 0b channel, SEND_WITH_ACK\n  'ACK_HIGH_PRIORITY': '1c', // ack 0c channel, SEND_HIGH_PRIORITY\n});\n\n/**\n * Drone connection class\n *\n * Exposes an api for controlling the drone\n *\n * @fires DroneCommand#connected\n * @fires DroneCommand#sensor:\n */\nexport default class DroneConnection extends EventEmitter {\n  /**\n   * Creates a new DroneConnection instance\n   * @param {string} droneFilter - The drone name leave blank for no filter\n   */\n  constructor(droneFilter = '') {\n    super();\n\n    this.characteristics = [];\n\n    this._characteristicLookupCache = {};\n    this._commandCallback = {};\n    this._sensorStore = {};\n    this._stepStore = {};\n\n    this.droneFilter = droneFilter;\n\n    // Noble returns an instance when you require\n    // it. So we need to prevent webpack from\n    // pre-loading it.\n    // eslint-disable-next-line no-eval\n    this.noble = eval('require(\\'noble\\')');\n    this._parser = new CommandParser();\n\n    // bind noble event handlers\n    this.noble.on('stateChange', state => this._onNobleStateChange(state));\n    this.noble.on('discover', peripheral => this._onPeripheralDiscovery(peripheral));\n  }\n\n  /**\n   * Event handler for when noble broadcasts a state change\n   * @param  {String} state a string describing noble's state\n   * @return {undefined}\n   * @private\n   */\n  _onNobleStateChange(state) {\n    Logger.debug(`Noble state changed to ${state}`);\n\n    if (state === 'poweredOn') {\n      Logger.info('Searching for drones...');\n      this.noble.startScanning();\n    }\n  }\n\n  /**\n   * Event handler for when noble discovers a peripheral\n   * Validates it is a drone and attempts to connect.\n   *\n   * @param {Peripheral} peripheral a noble peripheral class\n   * @return {undefined}\n   * @private\n   */\n  _onPeripheralDiscovery(peripheral) {\n    if (!this._validatePeripheral(peripheral)) {\n      return;\n    }\n\n    Logger.info(`Peripheral found ${peripheral.advertisement.localName}`);\n\n    this.noble.stopScanning();\n\n    peripheral.connect((error) => {\n      if (error) {\n        throw error;\n      }\n      this._peripheral = peripheral;\n\n      this._setupPeripheral();\n    });\n  }\n\n  /**\n   * Validates a noble Peripheral class is a Parrot MiniDrone\n   * @param {Peripheral} peripheral a noble peripheral object class\n   * @return {boolean} If the peripheral is a drone\n   * @private\n   */\n  _validatePeripheral(peripheral) {\n    if (!peripheral) {\n      return false;\n    }\n\n    const localName = peripheral.advertisement.localName;\n    const manufacturer = peripheral.advertisement.manufacturerData;\n    const matchesFilter = !this.droneFilter || localName === this.droneFilter;\n\n    const localNameMatch = matchesFilter || DRONE_PREFIXES.some((prefix) => localName && localName.indexOf(prefix) >= 0);\n    const manufacturerMatch = manufacturer && MANUFACTURER_SERIALS.indexOf(manufacturer) >= 0;\n\n    // Is TRUE according to droneFilter or if empty, for EITHER an \"RS_\" name OR manufacturer code.\n    return localNameMatch || manufacturerMatch;\n  }\n\n  /**\n   * Sets up a peripheral and finds all of it's services and characteristics\n   * @return {undefined}\n   */\n  _setupPeripheral() {\n    this.peripheral.discoverAllServicesAndCharacteristics((err, services, characteristics) => {\n      if (err) {\n        throw err;\n      }\n\n      // @todo\n      // Parse characteristics and only store the ones needed\n      // also validate that they're also present\n      this.characteristics = characteristics;\n\n      Logger.debug('Preforming handshake');\n      for (const uuid of handshakeUuids) {\n        const target = this.getCharacteristic(uuid);\n\n        target.subscribe();\n      }\n\n      Logger.debug('Adding listeners');\n      for (const uuid of characteristicReceiveUuids.values()) {\n        const target = this.getCharacteristic('fb' + uuid);\n\n        target.subscribe();\n        target.on('data', data => this._handleIncoming(uuid, data));\n      }\n\n      Logger.info(`Device connected ${this.peripheral.advertisement.localName}`);\n\n      setTimeout(() => {\n        /**\n         * Drone connected event\n         * You can control the drone once this event has been triggered.\n         *\n         * @event DroneCommand#connected\n         */\n        this.emit('connected');\n      }, 200);\n    });\n  }\n\n  /**\n   * @returns {Peripheral} a noble peripheral object class\n   */\n  get peripheral() {\n    return this._peripheral;\n  }\n\n  /**\n   * @returns {boolean} If the drone is connected\n   */\n  get connected() {\n    return this.characteristics.length > 0;\n  }\n\n  /**\n   * Finds a Noble Characteristic class for the given characteristic UUID\n   * @param {String} uuid The characteristics UUID\n   * @return {Characteristic} The Noble Characteristic corresponding to that UUID\n   */\n  getCharacteristic(uuid) {\n    uuid = uuid.toLowerCase();\n\n    if (typeof this._characteristicLookupCache[uuid] === 'undefined') {\n      this._characteristicLookupCache[uuid] = this.characteristics.find(x => x.uuid.substr(4, 4).toLowerCase() === uuid);\n    }\n\n    return this._characteristicLookupCache[uuid];\n  }\n\n  /**\n   * Send a command to the drone and execute it\n   * @param {DroneCommand} command - Command instance to be ran\n   */\n  runCommand(command) {\n    Logger.debug('SEND: ', command.toString());\n\n    const buffer = command.toBuffer();\n    const messageId = this._getStep(command.bufferType);\n\n    buffer.writeUInt16LE(messageId, 1);\n\n    this.getCharacteristic(command.sendCharacteristicUuid).write(buffer, true);\n  }\n\n  /**\n   * Handles incoming data from the drone\n   * @param {string} channelUuid - The channel uuid\n   * @param {Buffer} buffer - The packet data\n   * @private\n   */\n  _handleIncoming(channelUuid, buffer) {\n    const channel = characteristicReceiveUuids.findForValue(channelUuid);\n    let callback;\n\n    switch (channel) {\n      case 'ACK_DRONE_DATA':\n        // We need to response with an ack\n        this._updateSensors(buffer.slice(2), true);\n        break;\n      case 'NO_ACK_DRONE_DATA':\n        this._updateSensors(buffer.slice(2), false);\n        break;\n      case 'ACK_COMMAND_SENT':\n      case 'ACK_HIGH_PRIORITY':\n        callback = this._commandCallback[channel];\n\n        delete this._commandCallback[channel];\n\n        if (typeof callback === 'function') {\n          callback();\n        }\n\n        break;\n      default:\n        Logger.warn(`Got data on an unknown channel ${channel} (wtf!?)`);\n        break;\n    }\n  }\n\n  /**\n   * Update the sensor\n   *\n   * @param {Buffer} buffer - Buffer containing just the command info\n   * @param {boolean} ack - If an acknowledgement for receiving the data should be sent\n   * @private\n   * @fires DroneConnection#sensor:\n   * @todo implement ack\n   */\n  _updateSensors(buffer, ack = false) {\n    if (buffer[0] === 0) {\n      return;\n    }\n\n    try {\n      const command = this._parser.parseBuffer(buffer);\n      const token = [command.projectName, command.className, command.commandName].join('-');\n\n      this._sensorStore[token] = command;\n\n      Logger.debug('RECV:', command.toString());\n\n      /**\n       * Fires when a new sensor reading has been received\n       *\n       * @event DroneConnection#sensor:\n       * @type {DroneCommand} - The sensor reading\n       * @example\n       * connection.on('sensor:minidrone-UsbAccessoryState-GunState', function(sensor) {\n       *  if (sensor.state.value === sensor.enum.READY) {\n       *    console.log('The gun is ready to fire!');\n       *  }\n       * });\n       */\n      this.emit('sensor:' + token, command);\n    } catch (e) {\n      Logger.warn('Unable to parse packet:', buffer);\n      Logger.warn(e);\n    }\n  }\n\n  /**\n   * Get the most recent sensor reading\n   *\n   * @param {string} project - Project name\n   * @param {string} class_ - Class name\n   * @param {string} command - Command name\n   * @returns {DroneCommand|undefined} - {@link DroneCommand} instance or {@link undefined} if no sensor reading could be found\n   * @see {@link https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/}\n   */\n  getSensor(project, class_, command) {\n    const token = [project, class_, command].join('-');\n\n    return this.getSensorFromToken(token);\n  }\n\n  /**\n   * Get the most recent sensor reading using the sensor token\n   *\n   * @param {string} token - Command token\n   * @returns {DroneCommand|undefined} - {@link DroneCommand} instance or {@link undefined} if no sensor reading could be found\n   * @see {@link https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/}\n   * @see {@link DroneCommand.getToken}\n   */\n  getSensorFromToken(token) {\n    let command = this._sensorStore[token];\n\n    if (command) {\n      command = command.copy();\n    }\n\n    return command;\n  }\n\n  /**\n   * Get the logger level\n   * @returns {string|number} - logger level\n   * @see {@link https://github.com/winstonjs/winston}\n   */\n  get logLevel() {\n    return Logger.level;\n  }\n\n  /**\n   * Set the logger level\n   * @param {string|number} value - logger level\n   * @see {@link https://github.com/winstonjs/winston}\n   */\n  set logLevel(value) {\n    Logger.level = typeof value === 'number' ? value : value.toString();\n  }\n\n  /**\n   * used to count the drone command steps\n   * @param {string} id - Step store id\n   * @returns {number}\n   */\n  _getStep(id) {\n    if (typeof this._stepStore[id] === 'undefined') {\n      this._stepStore[id] = 0;\n    }\n\n    const out = this._stepStore[id];\n\n    this._stepStore[id] = this._stepStore[id] + 1 & 0xFF;\n\n    return out;\n  }\n}\n",
+    "content": "import EventEmitter from 'events';\nimport Logger from 'winston';\nimport Enum from './util/Enum';\nimport CommandParser from './CommandParser';\n\nconst MANUFACTURER_SERIALS = ['4300cf1900090100', '4300cf1909090100', '4300cf1907090100'];\nconst DRONE_PREFIXES = ['RS_', 'Mars_', 'Travis_', 'Maclan_', 'Mambo_', 'Blaze_', 'NewZ_'];\n\n// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3\nconst handshakeUuids = [\n  'fb0f', 'fb0e', 'fb1b', 'fb1c',\n  'fd22', 'fd23', 'fd24', 'fd52',\n  'fd53', 'fd54',\n];\n\n// the following UUID segments come from the Mambo and from the documenation at\n// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3\n// the 3rd and 4th bytes are used to identify the service\nconst serviceUuids = {\n  'fa': 'ARCOMMAND_SENDING_SERVICE',\n  'fb': 'ARCOMMAND_RECEIVING_SERVICE',\n  'fc': 'PERFORMANCE_COUNTER_SERVICE',\n  'fd21': 'NORMAL_BLE_FTP_SERVICE',\n  'fd51': 'UPDATE_BLE_FTP',\n  'fe00': 'UPDATE_RFCOMM_SERVICE',\n  '1800': 'Device Info',\n  '1801': 'unknown',\n};\n\n// the following characteristic UUID segments come from the documentation at\n// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3\n// the 4th bytes are used to identify the characteristic\n// the types of commands and data coming back are also documented here\n// http://forum.developer.parrot.com/t/ble-characteristics-of-minidrones/5912/2\nconst characteristicReceiveUuids = new Enum({\n  'ACK_DRONE_DATA': '0e', // drone data that needs an ack (needs to be ack on 1e)\n  'NO_ACK_DRONE_DATA': '0f', // data from drone (including battery and others), no ack\n  'ACK_COMMAND_SENT': '1b', // ack 0b channel, SEND_WITH_ACK\n  'ACK_HIGH_PRIORITY': '1c', // ack 0c channel, SEND_HIGH_PRIORITY\n});\n\n/**\n * Drone connection class\n *\n * Exposes an api for controlling the drone\n *\n * @fires DroneCommand#connected\n * @fires DroneCommand#sensor:\n * @property {CommandParser} parser - {@link CommandParser} instance\n */\nexport default class DroneConnection extends EventEmitter {\n  /**\n   * Creates a new DroneConnection instance\n   * @param {string} [droneFilter=] - The drone name leave blank for no filter\n   * @param {boolean} [warmup=true] - Warmup the command parser\n   */\n  constructor(droneFilter = '', warmup = true) {\n    super();\n\n    this.characteristics = [];\n\n    this._characteristicLookupCache = {};\n    this._commandCallback = {};\n    this._sensorStore = {};\n    this._stepStore = {};\n\n    this.droneFilter = droneFilter;\n\n    // Noble returns an instance when you require\n    // it. So we need to prevent webpack from\n    // pre-loading it.\n    // eslint-disable-next-line no-eval\n    this.noble = eval('require(\\'noble\\')');\n    this.parser = new CommandParser();\n\n    if (warmup) {\n      // We'll do it for you so you don't have to\n      this.parser.warmup();\n    }\n\n    // bind noble event handlers\n    this.noble.on('stateChange', state => this._onNobleStateChange(state));\n    this.noble.on('discover', peripheral => this._onPeripheralDiscovery(peripheral));\n  }\n\n  /**\n   * Event handler for when noble broadcasts a state change\n   * @param  {String} state a string describing noble's state\n   * @return {undefined}\n   * @private\n   */\n  _onNobleStateChange(state) {\n    Logger.debug(`Noble state changed to ${state}`);\n\n    if (state === 'poweredOn') {\n      Logger.info('Searching for drones...');\n      this.noble.startScanning();\n    }\n  }\n\n  /**\n   * Event handler for when noble discovers a peripheral\n   * Validates it is a drone and attempts to connect.\n   *\n   * @param {Peripheral} peripheral a noble peripheral class\n   * @return {undefined}\n   * @private\n   */\n  _onPeripheralDiscovery(peripheral) {\n    if (!this._validatePeripheral(peripheral)) {\n      return;\n    }\n\n    Logger.info(`Peripheral found ${peripheral.advertisement.localName}`);\n\n    this.noble.stopScanning();\n\n    peripheral.connect((error) => {\n      if (error) {\n        throw error;\n      }\n      this._peripheral = peripheral;\n\n      this._setupPeripheral();\n    });\n  }\n\n  /**\n   * Validates a noble Peripheral class is a Parrot MiniDrone\n   * @param {Peripheral} peripheral a noble peripheral object class\n   * @return {boolean} If the peripheral is a drone\n   * @private\n   */\n  _validatePeripheral(peripheral) {\n    if (!peripheral) {\n      return false;\n    }\n\n    const localName = peripheral.advertisement.localName;\n    const manufacturer = peripheral.advertisement.manufacturerData;\n    const matchesFilter = !this.droneFilter || localName === this.droneFilter;\n\n    const localNameMatch = matchesFilter || DRONE_PREFIXES.some((prefix) => localName && localName.indexOf(prefix) >= 0);\n    const manufacturerMatch = manufacturer && MANUFACTURER_SERIALS.indexOf(manufacturer) >= 0;\n\n    // Is TRUE according to droneFilter or if empty, for EITHER an \"RS_\" name OR manufacturer code.\n    return localNameMatch || manufacturerMatch;\n  }\n\n  /**\n   * Sets up a peripheral and finds all of it's services and characteristics\n   * @return {undefined}\n   */\n  _setupPeripheral() {\n    this.peripheral.discoverAllServicesAndCharacteristics((err, services, characteristics) => {\n      if (err) {\n        throw err;\n      }\n\n      // @todo\n      // Parse characteristics and only store the ones needed\n      // also validate that they're also present\n      this.characteristics = characteristics;\n\n      Logger.debug('Preforming handshake');\n      for (const uuid of handshakeUuids) {\n        const target = this.getCharacteristic(uuid);\n\n        target.subscribe();\n      }\n\n      Logger.debug('Adding listeners');\n      for (const uuid of characteristicReceiveUuids.values()) {\n        const target = this.getCharacteristic('fb' + uuid);\n\n        target.subscribe();\n        target.on('data', data => this._handleIncoming(uuid, data));\n      }\n\n      Logger.info(`Device connected ${this.peripheral.advertisement.localName}`);\n\n      setTimeout(() => {\n        /**\n         * Drone connected event\n         * You can control the drone once this event has been triggered.\n         *\n         * @event DroneCommand#connected\n         */\n        this.emit('connected');\n      }, 200);\n    });\n  }\n\n  /**\n   * @returns {Peripheral} a noble peripheral object class\n   */\n  get peripheral() {\n    return this._peripheral;\n  }\n\n  /**\n   * @returns {boolean} If the drone is connected\n   */\n  get connected() {\n    return this.characteristics.length > 0;\n  }\n\n  /**\n   * Finds a Noble Characteristic class for the given characteristic UUID\n   * @param {String} uuid The characteristics UUID\n   * @return {Characteristic} The Noble Characteristic corresponding to that UUID\n   */\n  getCharacteristic(uuid) {\n    uuid = uuid.toLowerCase();\n\n    if (typeof this._characteristicLookupCache[uuid] === 'undefined') {\n      this._characteristicLookupCache[uuid] = this.characteristics.find(x => x.uuid.substr(4, 4).toLowerCase() === uuid);\n    }\n\n    return this._characteristicLookupCache[uuid];\n  }\n\n  /**\n   * Send a command to the drone and execute it\n   * @param {DroneCommand} command - Command instance to be ran\n   */\n  runCommand(command) {\n    Logger.debug('SEND: ', command.toString());\n\n    const buffer = command.toBuffer();\n    const messageId = this._getStep(command.bufferType);\n\n    buffer.writeUInt16LE(messageId, 1);\n\n    this.getCharacteristic(command.sendCharacteristicUuid).write(buffer, true);\n  }\n\n  /**\n   * Handles incoming data from the drone\n   * @param {string} channelUuid - The channel uuid\n   * @param {Buffer} buffer - The packet data\n   * @private\n   */\n  _handleIncoming(channelUuid, buffer) {\n    const channel = characteristicReceiveUuids.findForValue(channelUuid);\n    let callback;\n\n    switch (channel) {\n      case 'ACK_DRONE_DATA':\n        // We need to response with an ack\n        this._updateSensors(buffer.slice(2), true);\n        break;\n      case 'NO_ACK_DRONE_DATA':\n        this._updateSensors(buffer.slice(2), false);\n        break;\n      case 'ACK_COMMAND_SENT':\n      case 'ACK_HIGH_PRIORITY':\n        callback = this._commandCallback[channel];\n\n        delete this._commandCallback[channel];\n\n        if (typeof callback === 'function') {\n          callback();\n        }\n\n        break;\n      default:\n        Logger.warn(`Got data on an unknown channel ${channel} (wtf!?)`);\n        break;\n    }\n  }\n\n  /**\n   * Update the sensor\n   *\n   * @param {Buffer} buffer - Buffer containing just the command info\n   * @param {boolean} ack - If an acknowledgement for receiving the data should be sent\n   * @private\n   * @fires DroneConnection#sensor:\n   * @todo implement ack\n   */\n  _updateSensors(buffer, ack = false) {\n    if (buffer[0] === 0) {\n      return;\n    }\n\n    try {\n      const command = this._parser.parseBuffer(buffer);\n      const token = [command.projectName, command.className, command.commandName].join('-');\n\n      this._sensorStore[token] = command;\n\n      Logger.debug('RECV:', command.toString());\n\n      /**\n       * Fires when a new sensor reading has been received\n       *\n       * @event DroneConnection#sensor:\n       * @type {DroneCommand} - The sensor reading\n       * @example\n       * connection.on('sensor:minidrone-UsbAccessoryState-GunState', function(sensor) {\n       *  if (sensor.state.value === sensor.state.enum.READY) {\n       *    console.log('The gun is ready to fire!');\n       *  }\n       * });\n       */\n      this.emit('sensor:' + token, command);\n      this.emit('sensor:*', command);\n    } catch (e) {\n      Logger.warn('Unable to parse packet:', buffer);\n      Logger.warn(e);\n    }\n  }\n\n  /**\n   * Get the most recent sensor reading\n   *\n   * @param {string} project - Project name\n   * @param {string} class_ - Class name\n   * @param {string} command - Command name\n   * @returns {DroneCommand|undefined} - {@link DroneCommand} instance or {@link undefined} if no sensor reading could be found\n   * @see {@link https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/}\n   */\n  getSensor(project, class_, command) {\n    const token = [project, class_, command].join('-');\n\n    return this.getSensorFromToken(token);\n  }\n\n  /**\n   * Get the most recent sensor reading using the sensor token\n   *\n   * @param {string} token - Command token\n   * @returns {DroneCommand|undefined} - {@link DroneCommand} instance or {@link undefined} if no sensor reading could be found\n   * @see {@link https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/}\n   * @see {@link DroneCommand.getToken}\n   */\n  getSensorFromToken(token) {\n    let command = this._sensorStore[token];\n\n    if (command) {\n      command = command.copy();\n    }\n\n    return command;\n  }\n\n  /**\n   * Get the logger level\n   * @returns {string|number} - logger level\n   * @see {@link https://github.com/winstonjs/winston}\n   */\n  get logLevel() {\n    return Logger.level;\n  }\n\n  /**\n   * Set the logger level\n   * @param {string|number} value - logger level\n   * @see {@link https://github.com/winstonjs/winston}\n   */\n  set logLevel(value) {\n    Logger.level = typeof value === 'number' ? value : value.toString();\n  }\n\n  /**\n   * used to count the drone command steps\n   * @param {string} id - Step store id\n   * @returns {number}\n   */\n  _getStep(id) {\n    if (typeof this._stepStore[id] === 'undefined') {\n      this._stepStore[id] = 0;\n    }\n\n    const out = this._stepStore[id];\n\n    this._stepStore[id] = this._stepStore[id] + 1 & 0xFF;\n\n    return out;\n  }\n}\n",
     "static": true,
     "longname": "/Users/shodan/Projects/minidrone-js/src/DroneConnection.js",
     "access": "public",
@@ -2510,7 +2572,7 @@
     "lineNumber": 1
   },
   {
-    "__docId__": 118,
+    "__docId__": 121,
     "kind": "variable",
     "name": "MANUFACTURER_SERIALS",
     "memberof": "src/DroneConnection.js",
@@ -2531,7 +2593,7 @@
     "ignore": true
   },
   {
-    "__docId__": 119,
+    "__docId__": 122,
     "kind": "variable",
     "name": "DRONE_PREFIXES",
     "memberof": "src/DroneConnection.js",
@@ -2552,7 +2614,7 @@
     "ignore": true
   },
   {
-    "__docId__": 120,
+    "__docId__": 123,
     "kind": "variable",
     "name": "handshakeUuids",
     "memberof": "src/DroneConnection.js",
@@ -2573,7 +2635,7 @@
     "ignore": true
   },
   {
-    "__docId__": 121,
+    "__docId__": 124,
     "kind": "variable",
     "name": "serviceUuids",
     "memberof": "src/DroneConnection.js",
@@ -2594,7 +2656,7 @@
     "ignore": true
   },
   {
-    "__docId__": 122,
+    "__docId__": 125,
     "kind": "variable",
     "name": "characteristicReceiveUuids",
     "memberof": "src/DroneConnection.js",
@@ -2615,7 +2677,7 @@
     "ignore": true
   },
   {
-    "__docId__": 123,
+    "__docId__": 126,
     "kind": "class",
     "name": "DroneConnection",
     "memberof": "src/DroneConnection.js",
@@ -2626,7 +2688,7 @@
     "importPath": "minidrone-js/src/DroneConnection.js",
     "importStyle": "DroneConnection",
     "description": "Drone connection class\n\nExposes an api for controlling the drone",
-    "lineNumber": 50,
+    "lineNumber": 51,
     "unknown": [
       {
         "tagName": "@fires",
@@ -2637,13 +2699,25 @@
         "tagValue": "DroneCommand#sensor:"
       }
     ],
+    "properties": [
+      {
+        "nullable": null,
+        "types": [
+          "CommandParser"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "parser",
+        "description": "{@link CommandParser} instance"
+      }
+    ],
     "interface": false,
     "extends": [
       "events~EventEmitter"
     ]
   },
   {
-    "__docId__": 124,
+    "__docId__": 127,
     "kind": "constructor",
     "name": "constructor",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -2653,7 +2727,7 @@
     "longname": "src/DroneConnection.js~DroneConnection#constructor",
     "access": "public",
     "description": "Creates a new DroneConnection instance",
-    "lineNumber": 55,
+    "lineNumber": 57,
     "params": [
       {
         "nullable": null,
@@ -2661,14 +2735,28 @@
           "string"
         ],
         "spread": false,
-        "optional": false,
+        "optional": true,
+        "defaultValue": "",
+        "defaultRaw": "",
         "name": "droneFilter",
         "description": "The drone name leave blank for no filter"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "boolean"
+        ],
+        "spread": false,
+        "optional": true,
+        "defaultValue": "true",
+        "defaultRaw": true,
+        "name": "warmup",
+        "description": "Warmup the command parser"
       }
     ]
   },
   {
-    "__docId__": 125,
+    "__docId__": 128,
     "kind": "member",
     "name": "characteristics",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -2676,7 +2764,7 @@
     "longname": "src/DroneConnection.js~DroneConnection#characteristics",
     "access": "public",
     "description": null,
-    "lineNumber": 58,
+    "lineNumber": 60,
     "undocument": true,
     "type": {
       "types": [
@@ -2685,46 +2773,12 @@
     }
   },
   {
-    "__docId__": 126,
+    "__docId__": 129,
     "kind": "member",
     "name": "_characteristicLookupCache",
     "memberof": "src/DroneConnection.js~DroneConnection",
     "static": false,
     "longname": "src/DroneConnection.js~DroneConnection#_characteristicLookupCache",
-    "access": "private",
-    "description": null,
-    "lineNumber": 60,
-    "undocument": true,
-    "type": {
-      "types": [
-        "{}"
-      ]
-    }
-  },
-  {
-    "__docId__": 127,
-    "kind": "member",
-    "name": "_commandCallback",
-    "memberof": "src/DroneConnection.js~DroneConnection",
-    "static": false,
-    "longname": "src/DroneConnection.js~DroneConnection#_commandCallback",
-    "access": "private",
-    "description": null,
-    "lineNumber": 61,
-    "undocument": true,
-    "type": {
-      "types": [
-        "{}"
-      ]
-    }
-  },
-  {
-    "__docId__": 128,
-    "kind": "member",
-    "name": "_sensorStore",
-    "memberof": "src/DroneConnection.js~DroneConnection",
-    "static": false,
-    "longname": "src/DroneConnection.js~DroneConnection#_sensorStore",
     "access": "private",
     "description": null,
     "lineNumber": 62,
@@ -2736,12 +2790,12 @@
     }
   },
   {
-    "__docId__": 129,
+    "__docId__": 130,
     "kind": "member",
-    "name": "_stepStore",
+    "name": "_commandCallback",
     "memberof": "src/DroneConnection.js~DroneConnection",
     "static": false,
-    "longname": "src/DroneConnection.js~DroneConnection#_stepStore",
+    "longname": "src/DroneConnection.js~DroneConnection#_commandCallback",
     "access": "private",
     "description": null,
     "lineNumber": 63,
@@ -2753,7 +2807,41 @@
     }
   },
   {
-    "__docId__": 130,
+    "__docId__": 131,
+    "kind": "member",
+    "name": "_sensorStore",
+    "memberof": "src/DroneConnection.js~DroneConnection",
+    "static": false,
+    "longname": "src/DroneConnection.js~DroneConnection#_sensorStore",
+    "access": "private",
+    "description": null,
+    "lineNumber": 64,
+    "undocument": true,
+    "type": {
+      "types": [
+        "{}"
+      ]
+    }
+  },
+  {
+    "__docId__": 132,
+    "kind": "member",
+    "name": "_stepStore",
+    "memberof": "src/DroneConnection.js~DroneConnection",
+    "static": false,
+    "longname": "src/DroneConnection.js~DroneConnection#_stepStore",
+    "access": "private",
+    "description": null,
+    "lineNumber": 65,
+    "undocument": true,
+    "type": {
+      "types": [
+        "{}"
+      ]
+    }
+  },
+  {
+    "__docId__": 133,
     "kind": "member",
     "name": "droneFilter",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -2761,7 +2849,7 @@
     "longname": "src/DroneConnection.js~DroneConnection#droneFilter",
     "access": "public",
     "description": null,
-    "lineNumber": 65,
+    "lineNumber": 67,
     "undocument": true,
     "type": {
       "types": [
@@ -2770,7 +2858,7 @@
     }
   },
   {
-    "__docId__": 131,
+    "__docId__": 134,
     "kind": "member",
     "name": "noble",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -2778,7 +2866,7 @@
     "longname": "src/DroneConnection.js~DroneConnection#noble",
     "access": "public",
     "description": null,
-    "lineNumber": 71,
+    "lineNumber": 73,
     "undocument": true,
     "type": {
       "types": [
@@ -2787,15 +2875,15 @@
     }
   },
   {
-    "__docId__": 132,
+    "__docId__": 135,
     "kind": "member",
-    "name": "_parser",
+    "name": "parser",
     "memberof": "src/DroneConnection.js~DroneConnection",
     "static": false,
-    "longname": "src/DroneConnection.js~DroneConnection#_parser",
-    "access": "private",
+    "longname": "src/DroneConnection.js~DroneConnection#parser",
+    "access": "public",
     "description": null,
-    "lineNumber": 72,
+    "lineNumber": 74,
     "undocument": true,
     "type": {
       "types": [
@@ -2804,7 +2892,7 @@
     }
   },
   {
-    "__docId__": 133,
+    "__docId__": 136,
     "kind": "method",
     "name": "_onNobleStateChange",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -2814,7 +2902,7 @@
     "longname": "src/DroneConnection.js~DroneConnection#_onNobleStateChange",
     "access": "private",
     "description": "Event handler for when noble broadcasts a state change",
-    "lineNumber": 85,
+    "lineNumber": 92,
     "params": [
       {
         "nullable": null,
@@ -2837,7 +2925,7 @@
     }
   },
   {
-    "__docId__": 134,
+    "__docId__": 137,
     "kind": "method",
     "name": "_onPeripheralDiscovery",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -2847,7 +2935,7 @@
     "longname": "src/DroneConnection.js~DroneConnection#_onPeripheralDiscovery",
     "access": "private",
     "description": "Event handler for when noble discovers a peripheral\nValidates it is a drone and attempts to connect.",
-    "lineNumber": 102,
+    "lineNumber": 109,
     "params": [
       {
         "nullable": null,
@@ -2870,7 +2958,7 @@
     }
   },
   {
-    "__docId__": 135,
+    "__docId__": 138,
     "kind": "member",
     "name": "_peripheral",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -2878,7 +2966,7 @@
     "longname": "src/DroneConnection.js~DroneConnection#_peripheral",
     "access": "private",
     "description": null,
-    "lineNumber": 115,
+    "lineNumber": 122,
     "undocument": true,
     "type": {
       "types": [
@@ -2887,7 +2975,7 @@
     }
   },
   {
-    "__docId__": 136,
+    "__docId__": 139,
     "kind": "method",
     "name": "_validatePeripheral",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -2897,7 +2985,7 @@
     "longname": "src/DroneConnection.js~DroneConnection#_validatePeripheral",
     "access": "private",
     "description": "Validates a noble Peripheral class is a Parrot MiniDrone",
-    "lineNumber": 127,
+    "lineNumber": 134,
     "params": [
       {
         "nullable": null,
@@ -2920,7 +3008,7 @@
     }
   },
   {
-    "__docId__": 137,
+    "__docId__": 140,
     "kind": "method",
     "name": "_setupPeripheral",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -2930,7 +3018,7 @@
     "longname": "src/DroneConnection.js~DroneConnection#_setupPeripheral",
     "access": "private",
     "description": "Sets up a peripheral and finds all of it's services and characteristics",
-    "lineNumber": 147,
+    "lineNumber": 154,
     "return": {
       "nullable": null,
       "types": [
@@ -2942,7 +3030,7 @@
     "params": []
   },
   {
-    "__docId__": 139,
+    "__docId__": 142,
     "kind": "get",
     "name": "peripheral",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -2952,7 +3040,7 @@
     "longname": "src/DroneConnection.js~DroneConnection#peripheral",
     "access": "public",
     "description": "",
-    "lineNumber": 190,
+    "lineNumber": 197,
     "unknown": [
       {
         "tagName": "@returns",
@@ -2974,7 +3062,7 @@
     }
   },
   {
-    "__docId__": 140,
+    "__docId__": 143,
     "kind": "get",
     "name": "connected",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -2984,7 +3072,7 @@
     "longname": "src/DroneConnection.js~DroneConnection#connected",
     "access": "public",
     "description": "",
-    "lineNumber": 197,
+    "lineNumber": 204,
     "unknown": [
       {
         "tagName": "@returns",
@@ -3006,7 +3094,7 @@
     }
   },
   {
-    "__docId__": 141,
+    "__docId__": 144,
     "kind": "method",
     "name": "getCharacteristic",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -3016,7 +3104,7 @@
     "longname": "src/DroneConnection.js~DroneConnection#getCharacteristic",
     "access": "public",
     "description": "Finds a Noble Characteristic class for the given characteristic UUID",
-    "lineNumber": 206,
+    "lineNumber": 213,
     "params": [
       {
         "nullable": null,
@@ -3039,7 +3127,7 @@
     }
   },
   {
-    "__docId__": 142,
+    "__docId__": 145,
     "kind": "method",
     "name": "runCommand",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -3049,7 +3137,7 @@
     "longname": "src/DroneConnection.js~DroneConnection#runCommand",
     "access": "public",
     "description": "Send a command to the drone and execute it",
-    "lineNumber": 220,
+    "lineNumber": 227,
     "params": [
       {
         "nullable": null,
@@ -3065,7 +3153,7 @@
     "return": null
   },
   {
-    "__docId__": 143,
+    "__docId__": 146,
     "kind": "method",
     "name": "_handleIncoming",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -3075,7 +3163,7 @@
     "longname": "src/DroneConnection.js~DroneConnection#_handleIncoming",
     "access": "private",
     "description": "Handles incoming data from the drone",
-    "lineNumber": 237,
+    "lineNumber": 244,
     "params": [
       {
         "nullable": null,
@@ -3101,7 +3189,7 @@
     "return": null
   },
   {
-    "__docId__": 144,
+    "__docId__": 147,
     "kind": "method",
     "name": "_updateSensors",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -3111,7 +3199,7 @@
     "longname": "src/DroneConnection.js~DroneConnection#_updateSensors",
     "access": "private",
     "description": "Update the sensor",
-    "lineNumber": 275,
+    "lineNumber": 282,
     "todo": [
       "implement ack"
     ],
@@ -3146,7 +3234,7 @@
     "return": null
   },
   {
-    "__docId__": 145,
+    "__docId__": 148,
     "kind": "method",
     "name": "getSensor",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -3159,7 +3247,7 @@
     "see": [
       "{@link https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/}"
     ],
-    "lineNumber": 316,
+    "lineNumber": 324,
     "unknown": [
       {
         "tagName": "@returns",
@@ -3209,7 +3297,7 @@
     }
   },
   {
-    "__docId__": 146,
+    "__docId__": 149,
     "kind": "method",
     "name": "getSensorFromToken",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -3223,7 +3311,7 @@
       "{@link https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/}",
       "{@link DroneCommand.getToken}"
     ],
-    "lineNumber": 330,
+    "lineNumber": 338,
     "unknown": [
       {
         "tagName": "@returns",
@@ -3253,7 +3341,7 @@
     }
   },
   {
-    "__docId__": 147,
+    "__docId__": 150,
     "kind": "get",
     "name": "logLevel",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -3266,7 +3354,7 @@
     "see": [
       "{@link https://github.com/winstonjs/winston}"
     ],
-    "lineNumber": 345,
+    "lineNumber": 353,
     "unknown": [
       {
         "tagName": "@returns",
@@ -3289,7 +3377,7 @@
     }
   },
   {
-    "__docId__": 148,
+    "__docId__": 151,
     "kind": "set",
     "name": "logLevel",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -3302,7 +3390,7 @@
     "see": [
       "{@link https://github.com/winstonjs/winston}"
     ],
-    "lineNumber": 354,
+    "lineNumber": 362,
     "params": [
       {
         "nullable": null,
@@ -3318,7 +3406,7 @@
     ]
   },
   {
-    "__docId__": 149,
+    "__docId__": 152,
     "kind": "method",
     "name": "_getStep",
     "memberof": "src/DroneConnection.js~DroneConnection",
@@ -3328,7 +3416,7 @@
     "longname": "src/DroneConnection.js~DroneConnection#_getStep",
     "access": "private",
     "description": "used to count the drone command steps",
-    "lineNumber": 363,
+    "lineNumber": 371,
     "unknown": [
       {
         "tagName": "@returns",
@@ -3357,7 +3445,7 @@
     }
   },
   {
-    "__docId__": 150,
+    "__docId__": 153,
     "kind": "file",
     "name": "src/InvalidCommandError.js",
     "content": "/**\n * Decimal to hex helper function\n * @param {number} d - input\n * @returns {string} - output\n * @private\n */\nfunction d2h(d) {\n  const h = Number(d).toString(16);\n\n  return h.length === 1 ? '0' + h : h;\n}\n\n/**\n * Thrown when an invalid command is requested or received\n */\nexport default class InvalidCommandError extends Error {\n  constructor(value, type, target, context = []) {\n    let message;\n\n    if (typeof target === 'number') {\n      message = 'with the value ' + d2h(target);\n    } else {\n      message = `called \"${target}\"`;\n    }\n\n    message = `Can't find ${type} ${message}`;\n\n    if (context.length > 0) {\n      message += ' (' + context.join(', ') + ')';\n    }\n\n    super(message);\n  }\n}\n",
@@ -3368,7 +3456,7 @@
     "lineNumber": 1
   },
   {
-    "__docId__": 151,
+    "__docId__": 154,
     "kind": "function",
     "name": "d2h",
     "memberof": "src/InvalidCommandError.js",
@@ -3411,7 +3499,7 @@
     "ignore": true
   },
   {
-    "__docId__": 152,
+    "__docId__": 155,
     "kind": "class",
     "name": "InvalidCommandError",
     "memberof": "src/InvalidCommandError.js",
@@ -3429,7 +3517,7 @@
     ]
   },
   {
-    "__docId__": 153,
+    "__docId__": 156,
     "kind": "constructor",
     "name": "constructor",
     "memberof": "src/InvalidCommandError.js~InvalidCommandError",
@@ -3443,7 +3531,7 @@
     "undocument": true
   },
   {
-    "__docId__": 154,
+    "__docId__": 157,
     "kind": "file",
     "name": "src/index.js",
     "content": "import 'source-map-support/register';\n\nexport InvalidCommandError from './InvalidCommandError';\nexport CommandParser from './CommandParser';\nexport DroneConnection from './DroneConnection';\n",
@@ -3454,10 +3542,10 @@
     "lineNumber": 1
   },
   {
-    "__docId__": 155,
+    "__docId__": 158,
     "kind": "file",
     "name": "src/util/Enum.js",
-    "content": "import { constant as constantCase } from 'case';\nimport { getTypeName } from './reflection';\n\n/**\n * Base enum class\n * @example\n * const Colors = new Enum(['RED', 'BLACK', 'GREEN', 'WHITE', 'BLUE']);\n *\n * const Answers = new Enum({\n *   YES: true,\n *   NO: false,\n *   // Passing functions as values will turn them into getters\n *   // Getter results will appear in ::values\n *   MAYBE: () => Math.random() >= 0.5,\n * });\n *\n * const FontStyles = new Enum(['italic', 'bold', 'underline', 'regular'], true);\n * FontStyles.ITALIC === 'italic'\n * FontStyles.BOLD   === 'bold'\n *\n * // etc...\n */\nexport default class Enum {\n  /**\n   * @param {Object<String, *>|Array<String>} enums - Data to build the enum from\n   * @param {boolean} auto - Auto generate enum from data making assumptions about\n   *                         the data, requires enums to be of type array.\n   */\n  constructor(enums, auto = false) {\n    const isArray = enums instanceof Array;\n\n    if (auto && !isArray) {\n      throw new TypeError(`Expected enums to be of type \"Array\" got \"${getTypeName(enums)}\"`);\n    }\n\n    if (isArray && auto) {\n      for (const row of enums) {\n        const key = constantCase(row);\n\n        Object.defineProperty(this, key, {\n          enumerable: true,\n          value: row,\n        });\n      }\n    } else if (isArray) {\n      for (const key of enums) {\n        Object.defineProperty(this, key, {\n          enumerable: true,\n          value: Enum._iota,\n        });\n      }\n    } else {\n      for (const key of Object.keys(enums)) {\n        const init = { enumerable: true };\n\n        if (typeof enums[key] === 'function') {\n          init.get = enums[key];\n        } else {\n          init.value = enums[key];\n        }\n\n        Object.defineProperty(this, key, init);\n      }\n    }\n\n    Object.freeze(this);\n  }\n\n  /**\n   * List enum keys\n   * @returns {Array} - Enum keys\n   */\n  keys() {\n    return Object.keys(this);\n  }\n\n  /**\n   * List enum values\n   * @returns {Array<*>} - Enum values\n   */\n  values() {\n    return this.keys()\n      .map(key => this[key])\n      .filter((v, i, s) => s.indexOf(v) === i);\n  }\n\n  /**\n   * Find if a key exists\n   * @param {string|number|*} name - Enum value name\n   * @returns {boolean}\n   */\n  hasKey(name) {\n    return this.keys().includes(name);\n  }\n\n  /**\n   * Find if a key exists\n   * @param {string|number|*} value - Enum value\n   * @returns {boolean}\n   */\n  hasValue(value) {\n    return this.values().includes(name);\n  }\n\n  /**\n   * Find key name for value\n   * @param {string|number|*} value - Enum value\n   * @returns {string} - name\n   */\n  findForValue(value) {\n    const index = this.keys().map(key => this[key]).findIndex(x => x === value);\n\n    return this.keys()[index];\n  }\n\n  /**\n   * Auto incrementing integer\n   * @returns {number} - enum value\n   * @private\n   */\n  static get _iota() {\n    if (!Enum.__iota) {\n      Enum.__iota = 0;\n    }\n\n    return Enum.__iota++;\n  }\n\n  /**\n   * Get a string representation of the enum\n   * @returns {string}\n   */\n  toString() {\n    return this.keys().map(key => key + '=' + this[key]).join(', ');\n  }\n}\n",
+    "content": "import { constant as constantCase } from 'case';\nimport { getTypeName } from './reflection';\n\n/**\n * Base enum class\n * @example\n * const Colors = new Enum(['RED', 'BLACK', 'GREEN', 'WHITE', 'BLUE']);\n *\n * const Answers = new Enum({\n *   YES: true,\n *   NO: false,\n *   // Passing functions as values will turn them into getters\n *   // Getter results will appear in ::values\n *   MAYBE: () => Math.random() >= 0.5,\n * });\n *\n * const FontStyles = new Enum(['italic', 'bold', 'underline', 'regular'], true);\n * FontStyles.ITALIC === 'italic'\n * FontStyles.BOLD   === 'bold'\n *\n * // etc...\n */\nexport default class Enum {\n  /**\n   * @param {Object<String, *>|Array<String>} enums - Data to build the enum from\n   * @param {boolean} auto - Auto generate enum from data making assumptions about\n   *                         the data, requires enums to be of type array.\n   */\n  constructor(enums, auto = false) {\n    const isArray = enums instanceof Array;\n\n    if (auto && !isArray) {\n      throw new TypeError(`Expected enums to be of type \"Array\" got \"${getTypeName(enums)}\"`);\n    }\n\n    if (isArray && auto) {\n      for (const row of enums) {\n        const key = constantCase(row);\n\n        Object.defineProperty(this, key, {\n          enumerable: true,\n          value: row,\n        });\n      }\n    } else if (isArray) {\n      for (const key of enums) {\n        Object.defineProperty(this, key, {\n          enumerable: true,\n          value: Enum._iota,\n        });\n      }\n    } else {\n      for (const key of Object.keys(enums)) {\n        const init = { enumerable: true };\n\n        if (typeof enums[key] === 'function') {\n          init.get = enums[key];\n        } else {\n          init.value = enums[key];\n        }\n\n        Object.defineProperty(this, key, init);\n      }\n    }\n\n    Object.freeze(this);\n  }\n\n  /**\n   * List enum keys\n   * @returns {Array} - Enum keys\n   */\n  keys() {\n    return Object.keys(this);\n  }\n\n  /**\n   * List enum values\n   * @returns {Array<*>} - Enum values\n   */\n  values() {\n    return this.keys()\n      .map(key => this[key])\n      .filter((v, i, s) => s.indexOf(v) === i);\n  }\n\n  /**\n   * Find if a key exists\n   * @param {string|number|*} name - Enum value name\n   * @returns {boolean}\n   */\n  hasKey(name) {\n    return this.keys().includes(name);\n  }\n\n  /**\n   * Find if a key exists\n   * @param {string|number|*} value - Enum value\n   * @returns {boolean}\n   */\n  hasValue(value) {\n    return this.values().includes(value);\n  }\n\n  /**\n   * Find key name for value\n   * @param {string|number|*} value - Enum value\n   * @returns {string} - name\n   */\n  findForValue(value) {\n    const index = this.keys().map(key => this[key]).findIndex(x => x === value);\n\n    return this.keys()[index];\n  }\n\n  /**\n   * Auto incrementing integer\n   * @returns {number} - enum value\n   * @private\n   */\n  static get _iota() {\n    if (!Enum.__iota) {\n      Enum.__iota = 0;\n    }\n\n    return Enum.__iota++;\n  }\n\n  /**\n   * Get a string representation of the enum\n   * @returns {string}\n   */\n  toString() {\n    return this.keys().map(key => key + '=' + this[key]).join(', ');\n  }\n}\n",
     "static": true,
     "longname": "/Users/shodan/Projects/minidrone-js/src/util/Enum.js",
     "access": "public",
@@ -3465,7 +3553,7 @@
     "lineNumber": 1
   },
   {
-    "__docId__": 156,
+    "__docId__": 159,
     "kind": "class",
     "name": "Enum",
     "memberof": "src/util/Enum.js",
@@ -3483,7 +3571,7 @@
     "interface": false
   },
   {
-    "__docId__": 157,
+    "__docId__": 160,
     "kind": "constructor",
     "name": "constructor",
     "memberof": "src/util/Enum.js~Enum",
@@ -3518,7 +3606,7 @@
     ]
   },
   {
-    "__docId__": 158,
+    "__docId__": 161,
     "kind": "method",
     "name": "keys",
     "memberof": "src/util/Enum.js~Enum",
@@ -3546,7 +3634,7 @@
     "params": []
   },
   {
-    "__docId__": 159,
+    "__docId__": 162,
     "kind": "method",
     "name": "values",
     "memberof": "src/util/Enum.js~Enum",
@@ -3574,7 +3662,7 @@
     "params": []
   },
   {
-    "__docId__": 160,
+    "__docId__": 163,
     "kind": "method",
     "name": "hasKey",
     "memberof": "src/util/Enum.js~Enum",
@@ -3615,7 +3703,7 @@
     }
   },
   {
-    "__docId__": 161,
+    "__docId__": 164,
     "kind": "method",
     "name": "hasValue",
     "memberof": "src/util/Enum.js~Enum",
@@ -3656,7 +3744,7 @@
     }
   },
   {
-    "__docId__": 162,
+    "__docId__": 165,
     "kind": "method",
     "name": "findForValue",
     "memberof": "src/util/Enum.js~Enum",
@@ -3697,7 +3785,7 @@
     }
   },
   {
-    "__docId__": 163,
+    "__docId__": 166,
     "kind": "get",
     "name": "_iota",
     "memberof": "src/util/Enum.js~Enum",
@@ -3729,7 +3817,7 @@
     }
   },
   {
-    "__docId__": 164,
+    "__docId__": 167,
     "kind": "method",
     "name": "toString",
     "memberof": "src/util/Enum.js~Enum",
@@ -3757,7 +3845,7 @@
     "params": []
   },
   {
-    "__docId__": 165,
+    "__docId__": 168,
     "kind": "file",
     "name": "src/util/reflection.js",
     "content": "/**\n * Get the name of the value type\n * @param {*} value - Any value\n * @private\n * @returns {string} - Value type name\n */\nexport function getTypeName(value) {\n  value = typeof value === 'function' ? value : value.constructor;\n\n  return value.name;\n}\n",
@@ -3768,7 +3856,7 @@
     "lineNumber": 1
   },
   {
-    "__docId__": 166,
+    "__docId__": 169,
     "kind": "function",
     "name": "getTypeName",
     "memberof": "src/util/reflection.js",
@@ -3819,7 +3907,7 @@
   },
   {
     "kind": "packageJSON",
-    "content": "{\n  \"name\": \"minidrone-js\",\n  \"version\": \"0.2.6\",\n  \"description\": \"Parrot Minidrone library\",\n  \"main\": \"dist/bundle.min.js\",\n  \"repository\": \"https://github.com/Mechazawa/minidrone-js\",\n  \"author\": \"Bas <mega@ioexception.at>\",\n  \"license\": \"MIT\",\n  \"dependencies\": {\n    \"arsdk-xml\": \"git://github.com/Parrot-Developers/arsdk-xml\",\n    \"case\": \"^1.5.4\",\n    \"events\": \"^1.1.1\",\n    \"noble\": \"git://github.com/jacobrosenthal/noble.git#highsierra\",\n    \"node-gyp\": \"^3.6.2\",\n    \"source-map-support\": \"^0.5.3\",\n    \"winston\": \"^2.4.0\",\n    \"xml2js\": \"^0.4.19\"\n  },\n  \"devDependencies\": {\n    \"ava\": \"^0.25.0\",\n    \"babel-cli\": \"^6.26.0\",\n    \"babel-core\": \"6\",\n    \"babel-eslint\": \"^8.2.1\",\n    \"babel-loader\": \"^7.1.2\",\n    \"babel-plugin-transform-export-extensions\": \"^6.22.0\",\n    \"babel-preset-env\": \"^1.6.1\",\n    \"esdoc\": \"^1.0.4\",\n    \"esdoc-ecmascript-proposal-plugin\": \"^1.0.0\",\n    \"esdoc-standard-plugin\": \"^1.0.0\",\n    \"eslint\": \"^4.16.0\",\n    \"fs-extra\": \"^5.0.0\",\n    \"fsevents\": \"^1.1.3\",\n    \"path\": \"^0.12.7\",\n    \"raw-loader\": \"^0.5.1\",\n    \"uglifyjs-webpack-plugin\": \"^1.1.6\",\n    \"webpack\": \"^3.10.0\"\n  },\n  \"scripts\": {\n    \"build\": \"rm -r dist||true; mkdir dist && npx webpack\",\n    \"watch\": \"rm -r dist||true; mkdir dist && npx webpack --watch\",\n    \"docs\": \"npx esdoc\"\n  },\n  \"babel\": {\n    \"presets\": [\n      [\n        \"env\",\n        {\n          \"targets\": {\n            \"browsers\": [\n              \"> 1%\"\n            ]\n          }\n        }\n      ]\n    ],\n    \"sourceMap\": true,\n    \"env\": {\n      \"production\": {\n        \"presets\": [\n          \"@ava/stage-4\"\n        ]\n      }\n    },\n    \"plugins\": [\n      \"transform-export-extensions\"\n    ]\n  }\n}\n",
+    "content": "{\n  \"name\": \"minidrone-js\",\n  \"version\": \"0.3.2\",\n  \"description\": \"Parrot Minidrone library\",\n  \"main\": \"dist/bundle.min.js\",\n  \"repository\": \"https://github.com/Mechazawa/minidrone-js\",\n  \"author\": \"Bas <mega@ioexception.at>\",\n  \"license\": \"MIT\",\n  \"dependencies\": {\n    \"arsdk-xml\": \"git://github.com/Parrot-Developers/arsdk-xml#f241e26\",\n    \"case\": \"^1.5.4\",\n    \"events\": \"^1.1.1\",\n    \"get-installed-path\": \"^4.0.8\",\n    \"noble\": \"git://github.com/jacobrosenthal/noble.git#highsierra\",\n    \"node-gyp\": \"^3.6.2\",\n    \"source-map-support\": \"^0.5.3\",\n    \"winston\": \"^2.4.0\",\n    \"xml2js\": \"^0.4.19\"\n  },\n  \"devDependencies\": {\n    \"ava\": \"^0.25.0\",\n    \"babel-cli\": \"^6.26.0\",\n    \"babel-core\": \"6\",\n    \"babel-eslint\": \"^8.2.1\",\n    \"babel-loader\": \"^7.1.2\",\n    \"babel-plugin-transform-export-extensions\": \"^6.22.0\",\n    \"babel-preset-env\": \"^1.6.1\",\n    \"esdoc\": \"^1.0.4\",\n    \"esdoc-ecmascript-proposal-plugin\": \"^1.0.0\",\n    \"esdoc-standard-plugin\": \"^1.0.0\",\n    \"eslint\": \"^4.16.0\",\n    \"fs-extra\": \"^5.0.0\",\n    \"fsevents\": \"^1.1.3\",\n    \"path\": \"^0.12.7\",\n    \"raw-loader\": \"^0.5.1\",\n    \"uglifyjs-webpack-plugin\": \"^1.1.6\",\n    \"webpack\": \"^3.10.0\"\n  },\n  \"scripts\": {\n    \"build\": \"rm -r dist||true; mkdir dist && npx webpack\",\n    \"watch\": \"rm -r dist||true; mkdir dist && npx webpack --watch\",\n    \"docs\": \"npx esdoc\"\n  },\n  \"babel\": {\n    \"presets\": [\n      [\n        \"env\",\n        {\n          \"targets\": {\n            \"browsers\": [\n              \"> 1%\"\n            ]\n          }\n        }\n      ]\n    ],\n    \"sourceMap\": true,\n    \"env\": {\n      \"production\": {\n        \"presets\": [\n          \"@ava/stage-4\"\n        ]\n      }\n    },\n    \"plugins\": [\n      \"transform-export-extensions\"\n    ]\n  }\n}\n",
     "longname": "/Users/shodan/Projects/minidrone-js/package.json",
     "name": "package.json",
     "static": true,
