@@ -10,6 +10,7 @@
     "arsdk-xml": "git://github.com/Parrot-Developers/arsdk-xml",
     "case": "^1.5.4",
     "events": "^1.1.1",
+    "get-installed-path": "^4.0.8",
     "noble": "git://github.com/jacobrosenthal/noble.git#highsierra",
     "node-gyp": "^3.6.2",
     "source-map-support": "^0.5.3",
