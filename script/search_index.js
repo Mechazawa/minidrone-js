@@ -36,12 +36,6 @@ window.esdocSearchIndex = [
     "class"
   ],
   [
-    "minidrone-js/src/util/reflection.js~gettypename",
-    "function/index.html#static-function-getTypeName",
-    "<span>getTypeName</span> <span class=\"search-result-import-path\">minidrone-js/src/util/reflection.js</span>",
-    "function"
-  ],
-  [
     "src/.external-ecmascript.js~array",
     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array",
     "src/.external-ecmascript.js~Array",
@@ -330,36 +324,6 @@ window.esdocSearchIndex = [
     "file"
   ],
   [
-    "src/commandparser.js~commandparser#_assertelementexists",
-    "class/src/CommandParser.js~CommandParser.html#instance-method-_assertElementExists",
-    "src/CommandParser.js~CommandParser#_assertElementExists",
-    "method"
-  ],
-  [
-    "src/commandparser.js~commandparser#_commandcache",
-    "class/src/CommandParser.js~CommandParser.html#instance-member-_commandCache",
-    "src/CommandParser.js~CommandParser#_commandCache",
-    "member"
-  ],
-  [
-    "src/commandparser.js~commandparser#_getcommandfrombuffer",
-    "class/src/CommandParser.js~CommandParser.html#instance-method-_getCommandFromBuffer",
-    "src/CommandParser.js~CommandParser#_getCommandFromBuffer",
-    "method"
-  ],
-  [
-    "src/commandparser.js~commandparser#_getjson",
-    "class/src/CommandParser.js~CommandParser.html#instance-method-_getJson",
-    "src/CommandParser.js~CommandParser#_getJson",
-    "method"
-  ],
-  [
-    "src/commandparser.js~commandparser#_getxml",
-    "class/src/CommandParser.js~CommandParser.html#instance-method-_getXml",
-    "src/CommandParser.js~CommandParser#_getXml",
-    "method"
-  ],
-  [
     "src/commandparser.js~commandparser#constructor",
     "class/src/CommandParser.js~CommandParser.html#instance-constructor-constructor",
     "src/CommandParser.js~CommandParser#constructor",
@@ -384,118 +348,10 @@ window.esdocSearchIndex = [
     "method"
   ],
   [
-    "src/commandparser.js~commandparser.__arsdkpath",
-    "class/src/CommandParser.js~CommandParser.html#static-member-__arsdkPath",
-    "src/CommandParser.js~CommandParser.__arsdkPath",
-    "member"
-  ],
-  [
-    "src/commandparser.js~commandparser.__files",
-    "class/src/CommandParser.js~CommandParser.html#static-member-__files",
-    "src/CommandParser.js~CommandParser.__files",
-    "member"
-  ],
-  [
-    "src/commandparser.js~commandparser._arsdkxmlpath",
-    "class/src/CommandParser.js~CommandParser.html#static-get-_arsdkXmlPath",
-    "src/CommandParser.js~CommandParser._arsdkXmlPath",
-    "member"
-  ],
-  [
-    "src/commandparser.js~commandparser._files",
-    "class/src/CommandParser.js~CommandParser.html#static-get-_files",
-    "src/CommandParser.js~CommandParser._files",
-    "member"
-  ],
-  [
     "src/dronecommand.js",
     "file/src/DroneCommand.js.html",
     "src/DroneCommand.js",
     "file"
-  ],
-  [
-    "src/dronecommand.js~dronecommand#_arguments",
-    "class/src/DroneCommand.js~DroneCommand.html#instance-member-_arguments",
-    "src/DroneCommand.js~DroneCommand#_arguments",
-    "member"
-  ],
-  [
-    "src/dronecommand.js~dronecommand#_buffer",
-    "class/src/DroneCommand.js~DroneCommand.html#instance-member-_buffer",
-    "src/DroneCommand.js~DroneCommand#_buffer",
-    "member"
-  ],
-  [
-    "src/dronecommand.js~dronecommand#_class",
-    "class/src/DroneCommand.js~DroneCommand.html#instance-member-_class",
-    "src/DroneCommand.js~DroneCommand#_class",
-    "member"
-  ],
-  [
-    "src/dronecommand.js~dronecommand#_classid",
-    "class/src/DroneCommand.js~DroneCommand.html#instance-member-_classId",
-    "src/DroneCommand.js~DroneCommand#_classId",
-    "member"
-  ],
-  [
-    "src/dronecommand.js~dronecommand#_classname",
-    "class/src/DroneCommand.js~DroneCommand.html#instance-member-_className",
-    "src/DroneCommand.js~DroneCommand#_className",
-    "member"
-  ],
-  [
-    "src/dronecommand.js~dronecommand#_command",
-    "class/src/DroneCommand.js~DroneCommand.html#instance-member-_command",
-    "src/DroneCommand.js~DroneCommand#_command",
-    "member"
-  ],
-  [
-    "src/dronecommand.js~dronecommand#_commandid",
-    "class/src/DroneCommand.js~DroneCommand.html#instance-member-_commandId",
-    "src/DroneCommand.js~DroneCommand#_commandId",
-    "member"
-  ],
-  [
-    "src/dronecommand.js~dronecommand#_commandname",
-    "class/src/DroneCommand.js~DroneCommand.html#instance-member-_commandName",
-    "src/DroneCommand.js~DroneCommand#_commandName",
-    "member"
-  ],
-  [
-    "src/dronecommand.js~dronecommand#_deprecated",
-    "class/src/DroneCommand.js~DroneCommand.html#instance-member-_deprecated",
-    "src/DroneCommand.js~DroneCommand#_deprecated",
-    "member"
-  ],
-  [
-    "src/dronecommand.js~dronecommand#_description",
-    "class/src/DroneCommand.js~DroneCommand.html#instance-member-_description",
-    "src/DroneCommand.js~DroneCommand#_description",
-    "member"
-  ],
-  [
-    "src/dronecommand.js~dronecommand#_maparguments",
-    "class/src/DroneCommand.js~DroneCommand.html#instance-method-_mapArguments",
-    "src/DroneCommand.js~DroneCommand#_mapArguments",
-    "method"
-  ],
-  [
-    "src/dronecommand.js~dronecommand#_project",
-    "class/src/DroneCommand.js~DroneCommand.html#instance-member-_project",
-    "src/DroneCommand.js~DroneCommand#_project",
-    "member"
-  ],
-  [
-    "src/dronecommand.js~dronecommand#_projectid",
-    "class/src/DroneCommand.js~DroneCommand.html#instance-member-_projectId",
-    "src/DroneCommand.js~DroneCommand#_projectId",
-    "member"
-  ],
-  [
-    "src/dronecommand.js~dronecommand#_projectname",
-    "class/src/DroneCommand.js~DroneCommand.html#instance-member-_projectName",
-    "src/DroneCommand.js~DroneCommand#_projectName",
-    "member"
   ],
   [
     "src/dronecommand.js~dronecommand#argumentnames",
@@ -624,42 +480,6 @@ window.esdocSearchIndex = [
     "file"
   ],
   [
-    "src/dronecommandargument.js~dronecommandargument#_description",
-    "class/src/DroneCommandArgument.js~DroneCommandArgument.html#instance-member-_description",
-    "src/DroneCommandArgument.js~DroneCommandArgument#_description",
-    "member"
-  ],
-  [
-    "src/dronecommandargument.js~dronecommandargument#_enum",
-    "class/src/DroneCommandArgument.js~DroneCommandArgument.html#instance-member-_enum",
-    "src/DroneCommandArgument.js~DroneCommandArgument#_enum",
-    "member"
-  ],
-  [
-    "src/dronecommandargument.js~dronecommandargument#_name",
-    "class/src/DroneCommandArgument.js~DroneCommandArgument.html#instance-member-_name",
-    "src/DroneCommandArgument.js~DroneCommandArgument#_name",
-    "member"
-  ],
-  [
-    "src/dronecommandargument.js~dronecommandargument#_parsevalue",
-    "class/src/DroneCommandArgument.js~DroneCommandArgument.html#instance-method-_parseValue",
-    "src/DroneCommandArgument.js~DroneCommandArgument#_parseValue",
-    "method"
-  ],
-  [
-    "src/dronecommandargument.js~dronecommandargument#_type",
-    "class/src/DroneCommandArgument.js~DroneCommandArgument.html#instance-member-_type",
-    "src/DroneCommandArgument.js~DroneCommandArgument#_type",
-    "member"
-  ],
-  [
-    "src/dronecommandargument.js~dronecommandargument#_value",
-    "class/src/DroneCommandArgument.js~DroneCommandArgument.html#instance-member-_value",
-    "src/DroneCommandArgument.js~DroneCommandArgument#_value",
-    "member"
-  ],
-  [
     "src/dronecommandargument.js~dronecommandargument#constructor",
     "class/src/DroneCommandArgument.js~DroneCommandArgument.html#instance-constructor-constructor",
     "src/DroneCommandArgument.js~DroneCommandArgument#constructor",
@@ -703,13 +523,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/dronecommandargument.js~dronecommandargument#value",
-    "class/src/DroneCommandArgument.js~DroneCommandArgument.html#instance-get-value",
+    "class/src/DroneCommandArgument.js~DroneCommandArgument.html#instance-set-value",
     "src/DroneCommandArgument.js~DroneCommandArgument#value",
     "member"
   ],
   [
     "src/dronecommandargument.js~dronecommandargument#value",
-    "class/src/DroneCommandArgument.js~DroneCommandArgument.html#instance-set-value",
+    "class/src/DroneCommandArgument.js~DroneCommandArgument.html#instance-get-value",
     "src/DroneCommandArgument.js~DroneCommandArgument#value",
     "member"
   ],
@@ -718,78 +538,6 @@ window.esdocSearchIndex = [
     "file/src/DroneConnection.js.html",
     "src/DroneConnection.js",
     "file"
-  ],
-  [
-    "src/droneconnection.js~droneconnection#_characteristiclookupcache",
-    "class/src/DroneConnection.js~DroneConnection.html#instance-member-_characteristicLookupCache",
-    "src/DroneConnection.js~DroneConnection#_characteristicLookupCache",
-    "member"
-  ],
-  [
-    "src/droneconnection.js~droneconnection#_commandcallback",
-    "class/src/DroneConnection.js~DroneConnection.html#instance-member-_commandCallback",
-    "src/DroneConnection.js~DroneConnection#_commandCallback",
-    "member"
-  ],
-  [
-    "src/droneconnection.js~droneconnection#_getstep",
-    "class/src/DroneConnection.js~DroneConnection.html#instance-method-_getStep",
-    "src/DroneConnection.js~DroneConnection#_getStep",
-    "method"
-  ],
-  [
-    "src/droneconnection.js~droneconnection#_handleincoming",
-    "class/src/DroneConnection.js~DroneConnection.html#instance-method-_handleIncoming",
-    "src/DroneConnection.js~DroneConnection#_handleIncoming",
-    "method"
-  ],
-  [
-    "src/droneconnection.js~droneconnection#_onnoblestatechange",
-    "class/src/DroneConnection.js~DroneConnection.html#instance-method-_onNobleStateChange",
-    "src/DroneConnection.js~DroneConnection#_onNobleStateChange",
-    "method"
-  ],
-  [
-    "src/droneconnection.js~droneconnection#_onperipheraldiscovery",
-    "class/src/DroneConnection.js~DroneConnection.html#instance-method-_onPeripheralDiscovery",
-    "src/DroneConnection.js~DroneConnection#_onPeripheralDiscovery",
-    "method"
-  ],
-  [
-    "src/droneconnection.js~droneconnection#_peripheral",
-    "class/src/DroneConnection.js~DroneConnection.html#instance-member-_peripheral",
-    "src/DroneConnection.js~DroneConnection#_peripheral",
-    "member"
-  ],
-  [
-    "src/droneconnection.js~droneconnection#_sensorstore",
-    "class/src/DroneConnection.js~DroneConnection.html#instance-member-_sensorStore",
-    "src/DroneConnection.js~DroneConnection#_sensorStore",
-    "member"
-  ],
-  [
-    "src/droneconnection.js~droneconnection#_setupperipheral",
-    "class/src/DroneConnection.js~DroneConnection.html#instance-method-_setupPeripheral",
-    "src/DroneConnection.js~DroneConnection#_setupPeripheral",
-    "method"
-  ],
-  [
-    "src/droneconnection.js~droneconnection#_stepstore",
-    "class/src/DroneConnection.js~DroneConnection.html#instance-member-_stepStore",
-    "src/DroneConnection.js~DroneConnection#_stepStore",
-    "member"
-  ],
-  [
-    "src/droneconnection.js~droneconnection#_updatesensors",
-    "class/src/DroneConnection.js~DroneConnection.html#instance-method-_updateSensors",
-    "src/DroneConnection.js~DroneConnection#_updateSensors",
-    "method"
-  ],
-  [
-    "src/droneconnection.js~droneconnection#_validateperipheral",
-    "class/src/DroneConnection.js~DroneConnection.html#instance-method-_validatePeripheral",
-    "src/DroneConnection.js~DroneConnection#_validatePeripheral",
-    "method"
   ],
   [
     "src/droneconnection.js~droneconnection#characteristics",
@@ -934,12 +682,6 @@ window.esdocSearchIndex = [
     "class/src/util/Enum.js~Enum.html#instance-method-values",
     "src/util/Enum.js~Enum#values",
     "method"
-  ],
-  [
-    "src/util/enum.js~enum._iota",
-    "class/src/util/Enum.js~Enum.html#static-get-_iota",
-    "src/util/Enum.js~Enum._iota",
-    "member"
   ],
   [
     "src/util/reflection.js",

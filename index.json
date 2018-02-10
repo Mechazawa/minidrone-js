@@ -613,6 +613,7 @@
     "description": null,
     "lineNumber": 21,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "{}"
@@ -656,7 +657,8 @@
       ],
       "spread": false,
       "description": "Parsed Xml data using xml2js"
-    }
+    },
+    "ignore": true
   },
   {
     "__docId__": 53,
@@ -778,7 +780,8 @@
       ],
       "spread": false,
       "description": "Buffer's related DroneCommand"
-    }
+    },
+    "ignore": true
   },
   {
     "__docId__": 55,
@@ -891,7 +894,8 @@
       ],
       "spread": false,
       "description": null
-    }
+    },
+    "ignore": true
   },
   {
     "__docId__": 58,
@@ -904,6 +908,7 @@
     "description": null,
     "lineNumber": 239,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -987,7 +992,8 @@
         ],
         "description": "InvalidCommandError"
       }
-    ]
+    ],
+    "ignore": true
   },
   {
     "__docId__": 60,
@@ -1026,7 +1032,8 @@
       ],
       "spread": false,
       "description": "File contents"
-    }
+    },
+    "ignore": true
   },
   {
     "__docId__": 61,
@@ -1055,6 +1062,7 @@
       "spread": false,
       "description": "Path"
     },
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -1072,6 +1080,7 @@
     "description": null,
     "lineNumber": 288,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -1226,6 +1235,7 @@
     "description": null,
     "lineNumber": 61,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -1243,6 +1253,7 @@
     "description": null,
     "lineNumber": 62,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -1260,6 +1271,7 @@
     "description": null,
     "lineNumber": 63,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -1277,6 +1289,7 @@
     "description": null,
     "lineNumber": 65,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -1294,6 +1307,7 @@
     "description": null,
     "lineNumber": 66,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -1311,6 +1325,7 @@
     "description": null,
     "lineNumber": 67,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -1328,6 +1343,7 @@
     "description": null,
     "lineNumber": 69,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -1345,6 +1361,7 @@
     "description": null,
     "lineNumber": 70,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -1362,6 +1379,7 @@
     "description": null,
     "lineNumber": 71,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -1379,6 +1397,7 @@
     "description": null,
     "lineNumber": 73,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -1396,6 +1415,7 @@
     "description": null,
     "lineNumber": 74,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -1413,6 +1433,7 @@
     "description": null,
     "lineNumber": 75,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -1430,6 +1451,7 @@
     "description": null,
     "lineNumber": 78,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -1948,6 +1970,7 @@
       "spread": false,
       "description": ""
     },
+    "ignore": true,
     "params": []
   },
   {
@@ -2162,6 +2185,7 @@
     "description": null,
     "lineNumber": 16,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -2179,6 +2203,7 @@
     "description": null,
     "lineNumber": 17,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -2196,6 +2221,7 @@
     "description": null,
     "lineNumber": 18,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -2213,6 +2239,7 @@
     "description": null,
     "lineNumber": 19,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -2230,6 +2257,7 @@
     "description": null,
     "lineNumber": 32,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -2481,7 +2509,8 @@
         ],
         "description": "TypeError"
       }
-    ]
+    ],
+    "ignore": true
   },
   {
     "__docId__": 118,
@@ -2783,6 +2812,7 @@
     "description": null,
     "lineNumber": 62,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "{}"
@@ -2800,6 +2830,7 @@
     "description": null,
     "lineNumber": 63,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "{}"
@@ -2817,6 +2848,7 @@
     "description": null,
     "lineNumber": 64,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "{}"
@@ -2834,6 +2866,7 @@
     "description": null,
     "lineNumber": 65,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "{}"
@@ -2922,7 +2955,8 @@
       ],
       "spread": false,
       "description": ""
-    }
+    },
+    "ignore": true
   },
   {
     "__docId__": 137,
@@ -2955,7 +2989,8 @@
       ],
       "spread": false,
       "description": ""
-    }
+    },
+    "ignore": true
   },
   {
     "__docId__": 138,
@@ -2968,6 +3003,7 @@
     "description": null,
     "lineNumber": 122,
     "undocument": true,
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -3005,7 +3041,8 @@
       ],
       "spread": false,
       "description": "If the peripheral is a drone"
-    }
+    },
+    "ignore": true
   },
   {
     "__docId__": 140,
@@ -3027,6 +3064,7 @@
       "spread": false,
       "description": ""
     },
+    "ignore": true,
     "params": []
   },
   {
@@ -3186,6 +3224,7 @@
         "description": "The packet data"
       }
     ],
+    "ignore": true,
     "return": null
   },
   {
@@ -3231,6 +3270,7 @@
         "description": "If an acknowledgement for receiving the data should be sent"
       }
     ],
+    "ignore": true,
     "return": null
   },
   {
@@ -3442,7 +3482,8 @@
       ],
       "spread": false,
       "description": ""
-    }
+    },
+    "ignore": true
   },
   {
     "__docId__": 153,
@@ -3810,6 +3851,7 @@
       "spread": false,
       "description": "enum value"
     },
+    "ignore": true,
     "type": {
       "types": [
         "*"
@@ -3895,7 +3937,8 @@
       ],
       "spread": false,
       "description": "Value type name"
-    }
+    },
+    "ignore": true
   },
   {
     "kind": "index",
