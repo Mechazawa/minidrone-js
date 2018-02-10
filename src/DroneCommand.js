@@ -280,6 +280,10 @@ export default class DroneCommand {
    * const str = command.toString();
    *
    * str === 'minidrone PilotingSettingsState PreferredPilotingModeChanged mode="medium"(1)';
+   * @example
+   * const str = command.toString(true);
+   *
+   * str === 'minidrone PilotingSettingsState PreferredPilotingModeChanged (enum)mode="medium"(1)';
    */
   toString(debug = false) {
     const argStr = this.arguments.map(x => x.toString(debug)).join(' ').trim();
