@@ -46,13 +46,15 @@ const characteristicReceiveUuids = new Enum({
  *
  * @fires DroneCommand#connected
  * @fires DroneCommand#sensor:
+ * @property {CommandParser} parser - {@link CommandParser} instance
  */
 export default class DroneConnection extends EventEmitter {
   /**
    * Creates a new DroneConnection instance
-   * @param {string} droneFilter - The drone name leave blank for no filter
+   * @param {string} [droneFilter=] - The drone name leave blank for no filter
+   * @param {boolean} [warmup=true] - Warmup the command parser
    */
-  constructor(droneFilter = '') {
+  constructor(droneFilter = '', warmup = true) {
     super();
 
     this.characteristics = [];
@@ -69,7 +71,12 @@ export default class DroneConnection extends EventEmitter {
     // pre-loading it.
     // eslint-disable-next-line no-eval
     this.noble = eval('require(\'noble\')');
-    this._parser = new CommandParser();
+    this.parser = new CommandParser();
+
+    if (warmup) {
+      // We'll do it for you so you don't have to
+      this.parser.warmup();
+    }
 
     // bind noble event handlers
     this.noble.on('stateChange', state => this._onNobleStateChange(state));
