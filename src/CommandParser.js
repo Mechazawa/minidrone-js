@@ -2,6 +2,9 @@ import { parseString } from 'xml2js';
 import DroneCommand from './DroneCommand';
 import Logger from 'winston';
 import InvalidCommandError from './InvalidCommandError';
+import { getInstalledPathSync as nodePath } from 'get-installed-path';
+import fs from 'fs';
+import * as path from "path";
 
 const _fileCache = {};
 const _commandCache = {};
@@ -16,8 +19,8 @@ export default class CommandParser {
    * @returns {Object} - Parsed Xml data using xml2js
    * @private
    */
-  _getXml(name) {
-    const file = CommandParser._fileMapping[name];
+  _getJson(name) {
+    const file = this._getXml(name);
 
     if (typeof file === 'undefined') {
       throw new Error(`Xml file ${name} could not be found`);
@@ -30,34 +33,13 @@ export default class CommandParser {
         _fileCache[name] = result;
       });
 
-      return this._getXml(name);
+      return this._getJson(name);
     } else if (_fileCache[name] === null) {
       // Fuck javascript async hipster shit
-      return this._getXml(name);
+      return this._getJson(name);
     }
 
     return _fileCache[name];
-  }
-
-  /**
-   * Used for file loading/lookup
-   * @returns {{minidrone: string, common: string}} - xml files with contents
-   * @private
-   */
-  static get _fileMapping() {
-    return {
-      minidrone: require('arsdk-xml/xml/minidrone.xml'),
-      common: require('arsdk-xml/xml/common.xml'),
-    };
-  }
-
-  /**
-   * Get a list of available files
-   * @returns {string[]} - Available files
-   * @private
-   */
-  static get _files() {
-    return Object.keys(CommandParser._fileMapping);
   }
 
   /**
@@ -80,7 +62,7 @@ export default class CommandParser {
     ].join('-');
 
     if (typeof _commandCache[cacheToken] === 'undefined') {
-      const project = this._getXml(projectName).project;
+      const project = this._getJson(projectName).project;
 
       this._assertElementExists(project, 'project', projectName);
 
@@ -133,7 +115,8 @@ export default class CommandParser {
     if (typeof _commandCache[cacheToken] === 'undefined') {
       // Find project
       const project = CommandParser._files
-        .map(x => this._getXml(x).project)
+        .map(x => this._getJson(x).project)
+        .filter(x => typeof x !== 'undefined')
         .find(x => Number(x.$.id) === projectId);
 
       this._assertElementExists(project, 'project', projectId);
@@ -227,7 +210,35 @@ export default class CommandParser {
    * @returns {void}
    */
   warmup() {
-    CommandParser._files.forEach(file => this._getXml(file));
+    const files = this.constructor._files;
+
+    for (const file of files) {
+      this._getJson(file);
+    }
+  }
+
+  /**
+   * Mapping of known xml files
+   * @type {string[]} - known xml files
+   * @private
+   */
+  static get _files() {
+    if (typeof this.__files === 'undefined') {
+      const arsdkXmlPath = CommandParser._arsdkXmlPath;
+
+      const isFile = path => fs.lstatSync(path).isFile();
+
+      this.__files = fs
+        .readdirSync(arsdkXmlPath)
+        .map(String)
+        .filter(file => file.endsWith('.xml'))
+        .filter(file => isFile(path.join(arsdkXmlPath, file)))
+        .map(file => file.replace('.xml', ''));
+
+      Logger.debug(`_files list found ${this._files.length} items`);
+    }
+
+    return this.__files;
   }
 
   /**
@@ -244,5 +255,31 @@ export default class CommandParser {
     if (typeof value === 'undefined') {
       throw new InvalidCommandError(value, type, target, context);
     }
+  }
+
+  /**
+   * Reads xml file from ArSDK synchronously without a cache
+   * @param {string} name - Xml file name
+   * @returns {string} - File contents
+   * @private
+   */
+  _getXml(name) {
+    const arsdkXmlPath = CommandParser._arsdkXmlPath;
+    const filePath = `${arsdkXmlPath}/${name}.xml`;
+
+    return fs.readFileSync(filePath);
+  }
+
+  /**
+   * Path of the ArSDK xml directory
+   * @returns {*|string} - Path
+   * @private
+   */
+  static get _arsdkXmlPath() {
+    if (typeof this.__arsdkPath === 'undefined') {
+      this.__arsdkPath = nodePath('arsdk-xml', { local: true }) + '/xml';
+    }
+
+    return this.__arsdkPath;
   }
 }

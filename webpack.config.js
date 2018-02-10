@@ -27,6 +27,7 @@ module.exports = {
     'case': 'case',
     noble: 'noble',
     'source-map-support': 'source-map-support',
+    'get-installed-path': 'get-installed-path',
   },
   module: {
     rules: [
