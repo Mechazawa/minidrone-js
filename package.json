@@ -7,7 +7,7 @@
   "author": "Bas <mega@ioexception.at>",
   "license": "MIT",
   "dependencies": {
-    "arsdk-xml": "git://github.com/Parrot-Developers/arsdk-xml",
+    "arsdk-xml": "git://github.com/Parrot-Developers/arsdk-xml#f241e26",
     "case": "^1.5.4",
     "events": "^1.1.1",
     "get-installed-path": "^4.0.8",
