@@ -4,7 +4,7 @@ import Logger from 'winston';
 import InvalidCommandError from './InvalidCommandError';
 import { getInstalledPathSync as nodePath } from 'get-installed-path';
 import fs from 'fs';
-import * as path from "path";
+import * as path from 'path';
 
 const _fileCache = {};
 const _commandCache = {};
@@ -207,11 +207,11 @@ export default class CommandParser {
 
   /**
    * Warn up the parser by pre-fetching the xml files
+   * @param {string[]} files - List of files to load in defaults to {@link CommandParser._files}
    * @returns {void}
+   *
    */
-  warmup() {
-    const files = this.constructor._files;
-
+  warmup(files = this.constructor._files) {
     for (const file of files) {
       this._getJson(file);
     }
