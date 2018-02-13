@@ -280,7 +280,7 @@ export default class CommandParser {
 
   /**
    * Path of the ArSDK xml directory
-   * @returns {*|string} - Path
+   * @returns {string} - Path
    * @private
    */
   static get _arsdkXmlPath() {

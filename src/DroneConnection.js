@@ -45,6 +45,7 @@ const characteristicReceiveUuids = new Enum({
  * Exposes an api for controlling the drone
  *
  * @fires DroneCommand#connected
+ * @fires DroneCommand#disconnected
  * @fires DroneCommand#sensor:
  * @property {CommandParser} parser - {@link CommandParser} instance
  */
@@ -178,6 +179,15 @@ export default class DroneConnection extends EventEmitter {
       }
 
       Logger.info(`Device connected ${this.peripheral.advertisement.localName}`);
+
+      // Register some event handlers
+      /**
+       * Drone disconnected event
+       * Fired when the bluetooth connection has been disconnected
+       *
+       * @event DroneCommand#disconnected
+       */
+      this.noble.on('disconnect', () => this.emit('disconnected'));
 
       setTimeout(() => {
         /**
