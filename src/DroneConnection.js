@@ -295,7 +295,7 @@ export default class DroneConnection extends EventEmitter {
     }
 
     try {
-      const command = this._parser.parseBuffer(buffer);
+      const command = this.parser.parseBuffer(buffer);
       const token = [command.projectName, command.className, command.commandName].join('-');
 
       this._sensorStore[token] = command;
