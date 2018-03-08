@@ -288,7 +288,7 @@ export default class DroneCommand {
   toString(debug = false) {
     const argStr = this.arguments.map(x => x.toString(debug)).join(' ').trim();
 
-    return (this.getToken() + ' ' + argStr).trim();
+    return `${this.getToken()} ${argStr}`.trim();
   }
 
   /**

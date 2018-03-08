@@ -11,6 +11,9 @@ const takePicture = parser.getCommand('minidrone', 'MediaRecord', 'PictureV2');
 const fireGun = parser.getCommand('minidrone', 'UsbAccessory', 'GunControl', {id: 0, action: 'FIRE'});
 const clawOpen = parser.getCommand('minidrone', 'UsbAccessory', 'ClawControl', {id: 0, action: 'OPEN'});
 const clawClose = parser.getCommand('minidrone', 'UsbAccessory', 'ClawControl', {id: 0, action: 'CLOSE'});
+const allState = parser.getCommand('common', 'Common', 'AllStates');
+const autoTakeOff = parser.getCommand('minidrone', 'Piloting', 'AutoTakeOffMode', {state: 1});
+
 
 function paramsChanged(a, b) {
   for (const key of Object.keys(a)) {
@@ -72,11 +75,12 @@ drone.on('connected', () => {
   });
 
   controller.on('circle:press', () => {
-    console.log(Object.values(drone._sensorStore).map(x=>x.toString()).join('\n'))
+    console.log(Object.values(drone._sensorStore).map(x=>x.toString()).join('\n'));
+    drone.runCommand(allState);
   });
   controller.on('x:press', () => drone.runCommand(takeoff));
   controller.on('square:press', () => drone.runCommand(landing));
-  controller.on('triangle:press', () => drone.runCommand(fireGun));
+  controller.on('triangle:press', () => drone.runCommand(autoTakeOff));
 
   controller.on('right:move', data => setFlightParams({yaw: joyToFlightParam(data.x), gaz: -joyToFlightParam(data.y)}));
   controller.on('left:move', data => setFlightParams({roll: joyToFlightParam(data.x), pitch: -joyToFlightParam(data.y)}));

@@ -127,10 +127,9 @@ export default class DroneCommandArgument {
         throw new TypeError(`Value ${value} could not be interpreted as an enum value for ${this.name}. Available options are ${this.enum.toString()}`);
       case 'string':
         return String(value);
+      default:
+        return Number(value);
     }
-
-    // Default behavior
-    return Number(value);
   }
 
   /**
@@ -159,9 +158,9 @@ export default class DroneCommandArgument {
         return 8;
       case 'enum':
         return 4;
+      default:
+        return 0;
     }
-
-    return 0;
   }
 
   /**
@@ -202,6 +201,8 @@ export default class DroneCommandArgument {
       case 'enum':
         value = `"${this.enum.findForValue(this.value)}"[${this.value}]`;
         break;
+      default:
+        value = this.value;
     }
 
     if (!debug) {

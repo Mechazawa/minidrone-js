@@ -33,10 +33,10 @@ const serviceUuids = {
 // the types of commands and data coming back are also documented here
 // http://forum.developer.parrot.com/t/ble-characteristics-of-minidrones/5912/2
 const characteristicReceiveUuids = new Enum({
-  'ACK_DRONE_DATA': '0e', // drone data that needs an ack (needs to be ack on 1e)
-  'NO_ACK_DRONE_DATA': '0f', // data from drone (including battery and others), no ack
-  'ACK_COMMAND_SENT': '1b', // ack 0b channel, SEND_WITH_ACK
-  'ACK_HIGH_PRIORITY': '1c', // ack 0c channel, SEND_HIGH_PRIORITY
+  ACK_DRONE_DATA: '0e', // drone data that needs an ack (needs to be ack on 1e)
+  NO_ACK_DRONE_DATA: '0f', // data from drone (including battery and others), no ack
+  ACK_COMMAND_SENT: '1b', // ack 0b channel, SEND_WITH_ACK
+  ACK_HIGH_PRIORITY: '1c', // ack 0c channel, SEND_HIGH_PRIORITY
 });
 
 /**
@@ -71,7 +71,7 @@ export default class DroneConnection extends EventEmitter {
     // it. So we need to prevent webpack from
     // pre-loading it.
     // eslint-disable-next-line no-eval
-    this.noble = eval('require(\'noble\')');
+    this.noble = eval('require("noble")');
     this.parser = new CommandParser();
 
     if (warmup) {
@@ -240,7 +240,7 @@ export default class DroneConnection extends EventEmitter {
     const buffer = command.toBuffer();
     const messageId = this._getStep(command.bufferType);
 
-    buffer.writeIntLE(messageId, 1);
+    buffer.writeIntLE(messageId, 1, 1);
 
     this.getCharacteristic(command.sendCharacteristicUuid).write(buffer, true);
   }

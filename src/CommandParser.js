@@ -64,10 +64,7 @@ export default class CommandParser {
    * const backFlip = parser.getCommand('minidrone', 'Animations', 'Flip', {direction: 'back'});
    */
   getCommand(projectName, className, commandName, commandArguments = {}) {
-    const cacheToken = [
-      projectName, className,
-      commandName,
-    ].join('-');
+    const cacheToken = [projectName, className, commandName].join('-');
 
     if (typeof this._commandCache[cacheToken] === 'undefined') {
       const project = this._getJson(projectName).project;
@@ -113,6 +110,9 @@ export default class CommandParser {
    * @private
    */
   _getCommandFromBuffer(buffer) {
+    // https://github.com/algolia/pdrone/commit/43cc0c4150297dab97d0f0bc119b8bd551da268f#comments
+    buffer = buffer.readUInt8(0) > 0x80 ? buffer.slice(1) : buffer;
+
     const projectId = buffer.readUInt8(0);
     const classId = buffer.readUInt8(1);
     const commandId = buffer.readUInt8(2);
@@ -161,7 +161,7 @@ export default class CommandParser {
   parseBuffer(buffer) {
     const command = this._getCommandFromBuffer(buffer);
 
-    let bufferOffset = 3;
+    let bufferOffset = 4;
 
     for (const arg of command.arguments) {
       let valueSize = arg.getValueSize();
@@ -196,7 +196,7 @@ export default class CommandParser {
           }
           break;
         case 'float':
-          value = buffer.readFloatBE(bufferOffset);
+          value = buffer.readFloatLE(bufferOffset);
           break;
         case 'double':
           value = buffer.readDoubleLE(bufferOffset);
@@ -234,7 +234,7 @@ export default class CommandParser {
     if (typeof this.__files === 'undefined') {
       const arsdkXmlPath = CommandParser._arsdkXmlPath;
 
-      const isFile = path => fs.lstatSync(path).isFile();
+      const isFile = filePath => fs.lstatSync(filePath).isFile();
 
       this.__files = fs
         .readdirSync(arsdkXmlPath)
