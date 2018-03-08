@@ -38,6 +38,7 @@
   "scripts": {
     "build": "rm -r dist||true; mkdir dist && npx webpack",
     "watch": "rm -r dist||true; mkdir dist && npx webpack --watch",
+    "test": "echo No tests defined",
     "docs": "npx esdoc"
   },
   "babel": {
