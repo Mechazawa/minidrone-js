@@ -1,4 +1,4 @@
-Minidrone-js [![](https://badge.fury.io/js/minidrone-js.svg)](https://badge.fury.io/js/minidrone-js) [![](https://api.codeclimate.com/v1/badges/fc937ad532e4160ea2f0/maintainability)](https://codeclimate.com/github/Mechazawa/minidrone-js/maintainability)
+Minidrone-js [![](https://badge.fury.io/js/minidrone-js.svg)](https://badge.fury.io/js/minidrone-js) [![](https://api.codeclimate.com/v1/badges/fc937ad532e4160ea2f0/maintainability)](https://codeclimate.com/github/Mechazawa/minidrone-js/maintainability) [![](https://travis-ci.org/Mechazawa/minidrone-js.svg?branch=master)](https://travis-ci.org/Mechazawa/minidrone-js)
 ---------------
 
 Minidrone-js is an easy to use drone library for the Parrot 
