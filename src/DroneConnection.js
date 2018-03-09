@@ -240,7 +240,7 @@ export default class DroneConnection extends EventEmitter {
     const buffer = command.toBuffer();
     const messageId = this._getStep(command.bufferType);
 
-    buffer.writeIntLE(messageId, 1, 1);
+    buffer.writeUIntLE(messageId, 1, 1);
 
     this.getCharacteristic(command.sendCharacteristicUuid).write(buffer, true);
   }
@@ -385,7 +385,8 @@ export default class DroneConnection extends EventEmitter {
 
     const out = this._stepStore[id];
 
-    this._stepStore[id] = this._stepStore[id] + 1 & 0xFF;
+    this._stepStore[id]++;
+    this._stepStore[id] &= 0xFF;
 
     return out;
   }
