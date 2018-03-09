@@ -139,7 +139,7 @@ export default class DroneConnection extends EventEmitter {
 
     const localName = peripheral.advertisement.localName;
     const manufacturer = peripheral.advertisement.manufacturerData;
-    const matchesFilter = !this.droneFilter || localName === this.droneFilter;
+    const matchesFilter = this.droneFilter ? localName === this.droneFilter : false;
 
     const localNameMatch = matchesFilter || DRONE_PREFIXES.some((prefix) => localName && localName.indexOf(prefix) >= 0);
     const manufacturerMatch = manufacturer && MANUFACTURER_SERIALS.indexOf(manufacturer) >= 0;
