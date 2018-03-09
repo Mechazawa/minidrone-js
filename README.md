@@ -67,6 +67,30 @@ drone.on('connected', () => {
 });
 ```
 
+## Troubleshooting
+
+#### MacOS won't connect to the drone
+ - First turn off Bluetooth
+ - Run the following code in your shell
+
+```sh
+rm ~/Library/Preferences/ByHost com.apple.Bluetooth.*.plist -v
+sudo rm /Library/Preferences/com.apple.Bluetooth.plist
+```
+
+ - Turn Bluetooth back on
+
+ Or alternativly using [blueutil]:
+ 
+ ```sh
+blueutil off
+rm ~/Library/Preferences/ByHost com.apple.Bluetooth.*.plist -v
+sudo rm /Library/Preferences/com.apple.Bluetooth.plist
+blueutil on
+ ```
+ 
+ [blueutil]: http://www.frederikseiffert.de/blueutil/
+
 ## License
 
 MIT License
