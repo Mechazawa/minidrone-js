@@ -1,10 +1,23 @@
-import EventEmitter from 'events';
-import Logger from 'winston';
-import Enum from './util/Enum';
-import CommandParser from './CommandParser';
+const EventEmitter = require('events');
+const Logger = require('winston');
+const Enum = require('./util/Enum');
+const CommandParser = require('./CommandParser');
 
-const MANUFACTURER_SERIALS = ['4300cf1900090100', '4300cf1909090100', '4300cf1907090100'];
-const DRONE_PREFIXES = ['RS_', 'Mars_', 'Travis_', 'Maclan_', 'Mambo_', 'Blaze_', 'NewZ_'];
+const MANUFACTURER_SERIALS = [
+  '4300cf1900090100',
+  '4300cf1909090100',
+  '4300cf1907090100',
+];
+
+const DRONE_PREFIXES = [
+  'RS_',
+  'Mars_',
+  'Travis_',
+  'Maclan_',
+  'Mambo_',
+  'Blaze_',
+  'NewZ_',
+];
 
 // http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
 const handshakeUuids = [
@@ -49,7 +62,7 @@ const characteristicReceiveUuids = new Enum({
  * @fires DroneCommand#sensor:
  * @property {CommandParser} parser - {@link CommandParser} instance
  */
-export default class DroneConnection extends EventEmitter {
+module.exports = class DroneConnection extends EventEmitter {
   /**
    * Creates a new DroneConnection instance
    * @param {string} [droneFilter=] - The drone name leave blank for no filter
@@ -67,11 +80,7 @@ export default class DroneConnection extends EventEmitter {
 
     this.droneFilter = droneFilter;
 
-    // Noble returns an instance when you require
-    // it. So we need to prevent webpack from
-    // pre-loading it.
-    // eslint-disable-next-line no-eval
-    this.noble = eval('require("noble")');
+    this.noble = require('noble');
     this.parser = new CommandParser();
 
     if (warmup) {
@@ -390,4 +399,4 @@ export default class DroneConnection extends EventEmitter {
 
     return out;
   }
-}
+};

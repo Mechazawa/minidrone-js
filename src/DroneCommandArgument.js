@@ -1,4 +1,4 @@
-import Enum from './util/Enum';
+const Enum = require('./util/Enum');
 
 /**
  * Drone Command Argument class
@@ -7,7 +7,7 @@ import Enum from './util/Enum';
  *
  * @property {Enum|undefined} enum - Enum store containing possible enum values if `this.type === 'enum'`. If set then `this.hasEnumProperty === true`.
  */
-export default class DroneCommandArgument {
+module.exports = class DroneCommandArgument {
   /**
    * Command argument constructor
    * @param {object} raw - Raw command argument data from the xml specification
@@ -211,4 +211,4 @@ export default class DroneCommandArgument {
 
     return `(${this.type})${this.name}=${value}`;
   }
-}
+};

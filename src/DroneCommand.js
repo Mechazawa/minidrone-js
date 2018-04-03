@@ -1,5 +1,5 @@
-import DroneCommandArgument from './DroneCommandArgument';
-import Enum from './util/Enum';
+const DroneCommandArgument = require('./DroneCommandArgument');
+const Enum = require('./util/Enum');
 
 const bufferType = new Enum({
   ACK: 0x02, // Acknowledgment of previously received data
@@ -50,7 +50,7 @@ const characteristicSendUuids = new Enum({
  *
  * drone.runCommand(backFlip);
  */
-export default class DroneCommand {
+module.exports = class DroneCommand {
   /**
    * Creates a new DroneCommand instance
    * @param {object} project - Project node from the xml spec
@@ -198,7 +198,6 @@ export default class DroneCommand {
   /**
    * Converts the command to it's buffer representation
    * @returns {Buffer} - Command buffer
-   * @todo don't fill in message id but use the first byte of the buffer to look up the current step in the connection handler
    * @throws TypeError
    */
   toBuffer() {
@@ -319,4 +318,4 @@ export default class DroneCommand {
   getToken() {
     return [this.projectName, this.className, this.commandName].join('-');
   }
-}
+};

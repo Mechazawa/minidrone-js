@@ -1,15 +1,15 @@
-import { parseString } from 'xml2js';
-import DroneCommand from './DroneCommand';
-import Logger from 'winston';
-import InvalidCommandError from './InvalidCommandError';
-import { getInstalledPathSync as nodePath } from 'get-installed-path';
-import fs from 'fs';
-import * as path from 'path';
+const { parseString } = require('xml2js');
+const DroneCommand = require('./DroneCommand');
+const Logger = require('winston');
+const InvalidCommandError = require('./InvalidCommandError');
+const fs = require('fs');
+const path = require('path');
+const resolve = require('resolve');
 
 /**
  * Command parser used for looking up commands in the xml definition
  */
-export default class CommandParser {
+module.exports = class CommandParser {
   /**
    * CommandParser constructor
    */
@@ -285,9 +285,10 @@ export default class CommandParser {
    */
   static get _arsdkXmlPath() {
     if (typeof this.__arsdkPath === 'undefined') {
-      this.__arsdkPath = nodePath('arsdk-xml', { local: true }) + '/xml';
+      // common.xml is a file we know exists so we can use it to find the xml directory
+      this.__arsdkPath = path.dirname(resolve.sync('arsdk-xml/xml/common.xml'));
     }
 
     return this.__arsdkPath;
   }
-}
+};

@@ -4,8 +4,8 @@
  * @private
  * @returns {string} - Value type name
  */
-export function getTypeName(value) {
+module.exports.getTypeName = function getTypeName(value) {
   value = typeof value === 'function' ? value : value.constructor;
 
   return value.name;
-}
+};

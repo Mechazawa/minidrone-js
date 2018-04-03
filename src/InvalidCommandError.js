@@ -13,7 +13,7 @@ function d2h(d) {
 /**
  * Thrown when an invalid command is requested or received
  */
-export default class InvalidCommandError extends Error {
+module.exports = class InvalidCommandError extends Error {
   constructor(value, type, target, context = []) {
     let message;
 
@@ -31,4 +31,4 @@ export default class InvalidCommandError extends Error {
 
     super(message);
   }
-}
+};

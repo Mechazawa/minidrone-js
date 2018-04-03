@@ -1,6 +1,6 @@
 require('winston').level = 'debug';
 
-const {CommandParser} = require('./dist/bundle');
+const {CommandParser} = require('./index');
 const parser = new CommandParser();
 
 parser.warmup();

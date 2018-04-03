@@ -1,5 +1,5 @@
-import { constant as constantCase } from 'case';
-import { getTypeName } from './reflection';
+const { constant: constantCase } = require('case');
+const { getTypeName } = require('./reflection');
 
 /**
  * Base enum class
@@ -20,7 +20,7 @@ import { getTypeName } from './reflection';
  *
  * // etc...
  */
-export default class Enum {
+module.exports = class Enum {
   /**
    * @param {Object<String, *>|Array<String>} enums - Data to build the enum from
    * @param {boolean} auto - Auto generate enum from data making assumptions about
@@ -128,9 +128,9 @@ export default class Enum {
 
   /**
    * Get a string representation of the enum
-   * @returns {string}
+   * @returns {string} - String representation of the enum
    */
   toString() {
     return this.keys().map(key => key + '=' + this[key]).join(', ');
   }
-}
+};
