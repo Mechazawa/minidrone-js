@@ -74,7 +74,7 @@ drone.on('connected', () => {
  - Run the following code in your shell
 
 ```sh
-rm ~/Library/Preferences/ByHost com.apple.Bluetooth.*.plist -v
+rm ~/Library/Preferences/ByHost/com.apple.Bluetooth.*.plist -v
 sudo rm /Library/Preferences/com.apple.Bluetooth.plist
 ```
 
@@ -84,7 +84,7 @@ sudo rm /Library/Preferences/com.apple.Bluetooth.plist
  
  ```sh
 blueutil off
-rm ~/Library/Preferences/ByHost com.apple.Bluetooth.*.plist -v
+rm ~/Library/Preferences/ByHost/com.apple.Bluetooth.*.plist -v
 sudo rm /Library/Preferences/com.apple.Bluetooth.plist
 blueutil on
  ```
