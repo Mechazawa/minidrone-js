@@ -7,7 +7,7 @@
   "author": "Bas 'Mechazawa' <mega@ioexception.at>",
   "license": "MIT",
   "dependencies": {
-    "arsdk-xml": "git://github.com/Parrot-Developers/arsdk-xml#f241e26",
+    "arsdk-xml": "1.0.0",
     "case": "^1.5.4",
     "events": "^1.1.1",
     "noble": "git://github.com/jacobrosenthal/noble.git#highsierra",
