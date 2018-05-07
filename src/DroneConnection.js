@@ -2,6 +2,7 @@ const EventEmitter = require('events');
 const Logger = require('winston');
 const Enum = require('./util/Enum');
 const CommandParser = require('./CommandParser');
+const { characteristicSendUuids, characteristicReceiveUuids } = require('./CharacteristicEnums');
 
 const MANUFACTURER_SERIALS = [
   '4300cf1900090100',
@@ -29,7 +30,7 @@ const handshakeUuids = [
 // the following UUID segments come from the Mambo and from the documenation at
 // http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
 // the 3rd and 4th bytes are used to identify the service
-const serviceUuids = {
+const serviceUuids = new Enum({
   'fa': 'ARCOMMAND_SENDING_SERVICE',
   'fb': 'ARCOMMAND_RECEIVING_SERVICE',
   'fc': 'PERFORMANCE_COUNTER_SERVICE',
@@ -38,18 +39,6 @@ const serviceUuids = {
   'fe00': 'UPDATE_RFCOMM_SERVICE',
   '1800': 'Device Info',
   '1801': 'unknown',
-};
-
-// the following characteristic UUID segments come from the documentation at
-// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
-// the 4th bytes are used to identify the characteristic
-// the types of commands and data coming back are also documented here
-// http://forum.developer.parrot.com/t/ble-characteristics-of-minidrones/5912/2
-const characteristicReceiveUuids = new Enum({
-  ACK_DRONE_DATA: '0e', // drone data that needs an ack (needs to be ack on 1e)
-  NO_ACK_DRONE_DATA: '0f', // data from drone (including battery and others), no ack
-  ACK_COMMAND_SENT: '1b', // ack 0b channel, SEND_WITH_ACK
-  ACK_HIGH_PRIORITY: '1c', // ack 0c channel, SEND_HIGH_PRIORITY
 });
 
 /**
@@ -267,10 +256,10 @@ module.exports = class DroneConnection extends EventEmitter {
     switch (channel) {
       case 'ACK_DRONE_DATA':
         // We need to response with an ack
-        this._updateSensors(buffer.slice(2), true);
+        this._updateSensors(buffer, true);
         break;
       case 'NO_ACK_DRONE_DATA':
-        this._updateSensors(buffer.slice(2), false);
+        this._updateSensors(buffer);
         break;
       case 'ACK_COMMAND_SENT':
       case 'ACK_HIGH_PRIORITY':
@@ -299,12 +288,12 @@ module.exports = class DroneConnection extends EventEmitter {
    * @todo implement ack
    */
   _updateSensors(buffer, ack = false) {
-    if (buffer[0] === 0) {
+    if (buffer[2] === 0) {
       return;
     }
 
     try {
-      const command = this.parser.parseBuffer(buffer);
+      const command = this.parser.parseBuffer(buffer.slice(2));
       const token = [command.projectName, command.className, command.commandName].join('-');
 
       this._sensorStore[token] = command;
@@ -328,6 +317,12 @@ module.exports = class DroneConnection extends EventEmitter {
     } catch (e) {
       Logger.warn('Unable to parse packet:', buffer);
       Logger.warn(e);
+    }
+
+    if (ack) {
+      const packetId = buffer.readUInt8(1);
+
+      this.ack(packetId);
     }
   }
 
@@ -385,7 +380,7 @@ module.exports = class DroneConnection extends EventEmitter {
   /**
    * used to count the drone command steps
    * @param {string} id - Step store id
-   * @returns {number}
+   * @returns {number} - step number
    */
   _getStep(id) {
     if (typeof this._stepStore[id] === 'undefined') {
@@ -398,5 +393,22 @@ module.exports = class DroneConnection extends EventEmitter {
     this._stepStore[id] &= 0xFF;
 
     return out;
+  }
+
+  /**
+   * Acknowledge a packet
+   * @param {number} packetId - Id of the packet to ack
+   */
+  _ack(packetId) {
+    Logger.info('ACK: ' + packetId);
+
+    const characteristic = characteristicSendUuids.ACK_COMMAND;
+    const buffer = new Buffer(3);
+
+    buffer.writeUIntLE(characteristic, 0, 1);
+    buffer.writeUIntLE(this._getStep(characteristic), 1, 1);
+    buffer.writeUIntLE(packetId, 2, 1);
+
+    this.getCharacteristic(characteristic).write(buffer, true);
   }
 };
