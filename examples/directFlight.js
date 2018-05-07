@@ -1,5 +1,5 @@
 const dualShock = require('dualshock-controller');
-const {DroneConnection, CommandParser} = require('../dist/bundle');
+const {DroneConnection, CommandParser} = require('../src');
 
 const controller = dualShock({config: 'dualShock4-alternate-driver'});
 const parser = new CommandParser();

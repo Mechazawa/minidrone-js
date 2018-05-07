@@ -1,4 +1,4 @@
-const {DroneConnection, CommandParser} = require('../dist/bundle');
+const {DroneConnection, CommandParser} = require('../src');
 
 const parser = new CommandParser();
 const drone = new DroneConnection();
