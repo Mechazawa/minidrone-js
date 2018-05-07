@@ -76,6 +76,7 @@ module.exports = class DroneCommand {
 
     // NON_ACK, ACK or HIGH_PRIO. Defaults to ACK
     this._buffer = command.$.buffer || 'DATA_WITH_ACK';
+    this._timeout = command.$.timeout || 'POP';
 
     this._mapArguments();
   }
@@ -189,7 +190,7 @@ module.exports = class DroneCommand {
 
   /**
    * Clones the instance
-   * @returns {DroneCommand}
+   * @returns {DroneCommand} - Cloned instance
    */
   clone() {
     return new this.constructor(this._project, this._class, this._command);
@@ -292,7 +293,7 @@ module.exports = class DroneCommand {
 
   /**
    * Get the command buffer type
-   * @returns {string}
+   * @returns {string} - Buffer type
    */
   get bufferType() {
     return this._buffer.toUpperCase();
@@ -300,16 +301,25 @@ module.exports = class DroneCommand {
 
   /**
    * Get the command buffer flag based on it's type
-   * @returns {number}
+   * @returns {number} - Buffer flag
    */
   get bufferFlag() {
     return bufferType[this.bufferType];
   }
 
   /**
+   * Indicates the required action to be taken in case the command times out
+   * The value of this attribute can be either POP, RETRY or FLUSH, defaulting to POP
+   * @returns {string} - Action name
+   */
+  get timeoutAction() {
+    return this._timeout;
+  }
+
+  /**
    * Get the token representation of the command. This
    * is useful for registering sensors for example
-   * @returns {string}
+   * @returns {string} - Command token
    * @example
    * const backFlip = parser.getCommand('minidrone', 'Animations', 'Flip', {direction: 'back'});
    *
