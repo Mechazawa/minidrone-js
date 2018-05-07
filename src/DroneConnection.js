@@ -281,7 +281,7 @@ module.exports = class DroneConnection extends EventEmitter {
   /**
    * Update the sensor
    *
-   * @param {Buffer} buffer - Buffer containing just the command info
+   * @param {Buffer} buffer - Command buffer
    * @param {boolean} ack - If an acknowledgement for receiving the data should be sent
    * @private
    * @fires DroneConnection#sensor:
