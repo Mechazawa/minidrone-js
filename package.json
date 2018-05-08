@@ -17,11 +17,11 @@
     "xml2js": "^0.4.19"
   },
   "devDependencies": {
-    "ava": "^0.25.0",
-    "esdoc": "^1.0.4",
-    "esdoc-ecmascript-proposal-plugin": "^1.0.0",
-    "esdoc-standard-plugin": "^1.0.0",
-    "eslint": "^4.16.0"
+    "ava": "0.25.0",
+    "esdoc": "1.0.4",
+    "esdoc-ecmascript-proposal-plugin": "1.0.0",
+    "esdoc-standard-plugin": "1.0.0",
+    "eslint": "4.17.0"
   },
   "scripts": {
     "test": "echo No tests defined",
