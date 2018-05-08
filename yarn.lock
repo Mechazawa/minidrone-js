@@ -201,9 +201,9 @@ arrify@^1.0.0, arrify@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/arrify/-/arrify-1.0.1.tgz#898508da2226f380df904728456849c1501a4b0d"
 
-"arsdk-xml@git://github.com/Parrot-Developers/arsdk-xml#f241e26":
-  version "0.0.0"
-  resolved "git://github.com/Parrot-Developers/arsdk-xml#f241e26d3f0a95b014e6948a23500ddd855b62c2"
+arsdk-xml@1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/arsdk-xml/-/arsdk-xml-1.0.0.tgz#c7a1edd055f8be7289d256aebf39bd94e4098cbe"
 
 asn1@~0.2.3:
   version "0.2.3"
@@ -243,7 +243,7 @@ ava-init@^0.2.0:
     read-pkg-up "^2.0.0"
     write-pkg "^3.1.0"
 
-ava@^0.25.0:
+ava@0.25.0:
   version "0.25.0"
   resolved "https://registry.yarnpkg.com/ava/-/ava-0.25.0.tgz#8ac87780514f96a6fd42e1306eaa0752ce3a407f"
   dependencies:
@@ -1330,7 +1330,7 @@ esdoc-coverage-plugin@^1.0.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/esdoc-coverage-plugin/-/esdoc-coverage-plugin-1.1.0.tgz#3869869cd7f87891f972625787695a299aece45c"
 
-esdoc-ecmascript-proposal-plugin@^1.0.0:
+esdoc-ecmascript-proposal-plugin@1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/esdoc-ecmascript-proposal-plugin/-/esdoc-ecmascript-proposal-plugin-1.0.0.tgz#390dc5656ba8a2830e39dba3570d79138df2ffd9"
 
@@ -1364,7 +1364,7 @@ esdoc-publish-html-plugin@^1.0.0:
     marked "0.3.6"
     taffydb "2.7.2"
 
-esdoc-standard-plugin@^1.0.0:
+esdoc-standard-plugin@1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/esdoc-standard-plugin/-/esdoc-standard-plugin-1.0.0.tgz#661201cac7ef868924902446fdac1527253c5d4d"
   dependencies:
@@ -1392,7 +1392,7 @@ esdoc-unexported-identifier-plugin@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/esdoc-unexported-identifier-plugin/-/esdoc-unexported-identifier-plugin-1.0.0.tgz#1f9874c6a7c2bebf9ad397c3ceb75c9c69dabab1"
 
-esdoc@^1.0.4:
+esdoc@1.0.4:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/esdoc/-/esdoc-1.0.4.tgz#e2534a228aa1f185e9746e8e418ae0330b967010"
   dependencies:
@@ -1419,7 +1419,7 @@ eslint-visitor-keys@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/eslint-visitor-keys/-/eslint-visitor-keys-1.0.0.tgz#3f3180fb2e291017716acb4c9d6d5b5c34a6a81d"
 
-eslint@^4.16.0:
+eslint@4.17.0:
   version "4.17.0"
   resolved "https://registry.yarnpkg.com/eslint/-/eslint-4.17.0.tgz#dc24bb51ede48df629be7031c71d9dc0ee4f3ddf"
   dependencies:
