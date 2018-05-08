@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "ava": "0.25.0",
-    "esdoc": "1.0.4",
+    "esdoc": "1.1.0",
     "esdoc-ecmascript-proposal-plugin": "1.0.0",
     "esdoc-standard-plugin": "1.0.0",
     "eslint": "4.17.0"
