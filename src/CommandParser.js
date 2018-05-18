@@ -67,18 +67,21 @@ module.exports = class CommandParser {
     const cacheToken = [projectName, className, commandName].join('-');
 
     if (typeof this._commandCache[cacheToken] === 'undefined') {
+      // Find project
       const project = this._getJson(projectName).project;
 
       this._assertElementExists(project, 'project', projectName);
 
       const context = [projectName];
 
+      // Find class
       const targetClass = project.class.find(v => v.$.name === className);
 
       this._assertElementExists(targetClass, 'class', className);
 
       context.push(className);
 
+      // Find command
       const targetCommand = targetClass.cmd.find(v => v.$.name === commandName);
 
       this._assertElementExists(targetCommand, 'command', commandName);

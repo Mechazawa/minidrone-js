@@ -9,7 +9,7 @@
   "dependencies": {
     "arsdk-xml": "1.0.0",
     "case": "^1.5.4",
-    "events": "^1.1.1",
+    "events": "^2.0.0",
     "noble": "git://github.com/jacobrosenthal/noble.git#highsierra",
     "node-gyp": "^3.6.2",
     "resolve": "^1.6.0",
@@ -17,14 +17,15 @@
     "xml2js": "^0.4.19"
   },
   "devDependencies": {
-    "ava": "^0.25.0",
-    "esdoc": "^1.0.4",
-    "esdoc-ecmascript-proposal-plugin": "^1.0.0",
-    "esdoc-standard-plugin": "^1.0.0",
-    "eslint": "^4.16.0"
+    "ava": "0.25.0",
+    "esdoc": "1.1.0",
+    "esdoc-ecmascript-proposal-plugin": "1.0.0",
+    "esdoc-standard-plugin": "1.0.0",
+    "eslint": "4.19.1"
   },
   "scripts": {
     "test": "echo No tests defined",
-    "docs": "npx esdoc"
+    "docs": "npx esdoc",
+    "lint": "npx eslint src --fix --cache"
   }
 }

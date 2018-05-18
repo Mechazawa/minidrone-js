@@ -40,7 +40,7 @@ module.exports = class DroneCommandArgument {
 
   /**
    * Parameter name
-   * @returns {string}
+   * @returns {string} - name
    */
   get name() {
     return this._name;
@@ -48,7 +48,7 @@ module.exports = class DroneCommandArgument {
 
   /**
    * Parameter description
-   * @returns {string}
+   * @returns {string} - description
    */
   get description() {
     return this._description;
@@ -56,7 +56,7 @@ module.exports = class DroneCommandArgument {
 
   /**
    * Parameter type
-   * @returns {string}
+   * @returns {string} - type
    */
   get type() {
     return this._type;
@@ -64,7 +64,7 @@ module.exports = class DroneCommandArgument {
 
   /**
    * Get the parameter value
-   * @returns {number|string}
+   * @returns {number|string} - value
    * @see DroneCommandArgument#type
    */
   get value() {
@@ -98,7 +98,7 @@ module.exports = class DroneCommandArgument {
 
   /**
    * If it has the enum property set
-   * @returns {boolean}
+   * @returns {boolean} - has enum
    */
   get hasEnumProperty() {
     return typeof this.enum !== 'undefined';
@@ -107,7 +107,7 @@ module.exports = class DroneCommandArgument {
   /**
    * Parses the value before setting it
    * @param {number|string} value - Target value
-   * @returns {number|string}
+   * @returns {number|string} - parsed value
    * @private
    * @throws TypeError
    */
@@ -134,7 +134,7 @@ module.exports = class DroneCommandArgument {
 
   /**
    * Gets the byte size of the value.
-   * @returns {number}
+   * @returns {number} - value size in bytes
    */
   getValueSize() {
     switch (this.type) {
@@ -167,7 +167,7 @@ module.exports = class DroneCommandArgument {
    * Returns a string representation of the DroneCommandArgument instance
    * @param {boolean} debug - If extra debug info should be shown.
    * @param {number} precision - Amount of precision for numerical values
-   * @returns {string}
+   * @returns {string} - string representation
    */
   toString(debug = false, precision = 3) {
     let value;

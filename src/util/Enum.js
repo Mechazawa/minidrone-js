@@ -87,7 +87,7 @@ module.exports = class Enum {
   /**
    * Find if a key exists
    * @param {string|number|*} name - Enum value name
-   * @returns {boolean}
+   * @returns {boolean} - key exists
    */
   hasKey(name) {
     return this.keys().includes(name);
@@ -96,7 +96,7 @@ module.exports = class Enum {
   /**
    * Find if a key exists
    * @param {string|number|*} value - Enum value
-   * @returns {boolean}
+   * @returns {boolean} - value exists
    */
   hasValue(value) {
     return this.values().includes(value);
@@ -105,7 +105,7 @@ module.exports = class Enum {
   /**
    * Find key name for value
    * @param {string|number|*} value - Enum value
-   * @returns {string} - name
+   * @returns {string} - key name
    */
   findForValue(value) {
     const index = this.keys().map(key => this[key]).findIndex(x => x === value);

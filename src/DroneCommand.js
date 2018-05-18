@@ -72,7 +72,7 @@ module.exports = class DroneCommand {
 
   /**
    * The project id
-   * @returns {number}
+   * @returns {number} - project id
    */
   get projectId() {
     return this._projectId;
@@ -80,7 +80,7 @@ module.exports = class DroneCommand {
 
   /**
    * The project name (minidrone, common, etc)
-   * @returns {string}
+   * @returns {string} - project name
    */
   get projectName() {
     return this._projectName;
@@ -88,7 +88,7 @@ module.exports = class DroneCommand {
 
   /**
    * The class id
-   * @returns {number}
+   * @returns {number} - class id
    */
   get classId() {
     return this._classId;
@@ -96,7 +96,7 @@ module.exports = class DroneCommand {
 
   /**
    * The class name
-   * @returns {string}
+   * @returns {string} - class name
    */
   get className() {
     return this._className;
@@ -104,7 +104,7 @@ module.exports = class DroneCommand {
 
   /**
    * The command id
-   * @returns {number}
+   * @returns {number} - command id
    */
   get commandId() {
     return this._commandId;
@@ -112,7 +112,7 @@ module.exports = class DroneCommand {
 
   /**
    * The command name
-   * @returns {string}
+   * @returns {string} - command name
    */
   get commandName() {
     return this._commandName;
@@ -120,7 +120,7 @@ module.exports = class DroneCommand {
 
   /**
    * Array containing the drone arguments
-   * @returns {DroneCommandArgument[]}
+   * @returns {DroneCommandArgument[]} - arguments
    */
   get arguments() {
     return this._arguments;
@@ -128,7 +128,7 @@ module.exports = class DroneCommand {
 
   /**
    * Returns if the command has any arguments
-   * @returns {boolean}
+   * @returns {boolean} - command has any arguments
    */
   hasArguments() {
     return this.arguments.length > 0;
@@ -136,7 +136,7 @@ module.exports = class DroneCommand {
 
   /**
    * Get the argument names. These names are also mapped to the instance
-   * @returns {string[]}
+   * @returns {string[]} - argument names
    */
   get argumentNames() {
     return this.arguments.map(x => x.name);
@@ -144,7 +144,7 @@ module.exports = class DroneCommand {
 
   /**
    * Get the command description
-   * @returns {string}
+   * @returns {string} - command description
    */
   get description() {
     return this._description;
@@ -152,7 +152,7 @@ module.exports = class DroneCommand {
 
   /**
    * Get if the command has been deprecated
-   * @returns {boolean}
+   * @returns {boolean} - deprecated
    */
   get deprecated() {
     return this._deprecated;
@@ -160,7 +160,7 @@ module.exports = class DroneCommand {
 
   /**
    * Get the send characteristic uuid based on the buffer type
-   * @returns {string}
+   * @returns {string} - uuid as a string
    */
   get sendCharacteristicUuid() {
     const t = bufferCharTranslationMap[this.bufferType] || 'SEND_WITH_ACK';
