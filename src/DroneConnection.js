@@ -179,7 +179,7 @@ module.exports = class DroneConnection extends EventEmitter {
         target.subscribe();
       }
 
-      Logger.debug('Adding listeners');
+      Logger.debug('Adding listeners (fb uuid prefix)');
       for (const uuid of characteristicReceiveUuids.values()) {
         const target = this.getCharacteristic('fb' + uuid);
 
@@ -443,7 +443,7 @@ module.exports = class DroneConnection extends EventEmitter {
    * @param {number} packetId - Id of the packet to ack
    */
   ack(packetId) {
-    Logger.info('ACK: ' + packetId);
+    Logger.debug('ACK: packet id ' + packetId);
 
     const characteristic = characteristicSendUuids.ACK_COMMAND;
     const buffer = new Buffer(3);
@@ -452,9 +452,6 @@ module.exports = class DroneConnection extends EventEmitter {
     buffer.writeUIntLE(this._getStep(characteristic), 1, 1);
     buffer.writeUIntLE(packetId, 2, 1);
 
-    Logger.debug('ACK_COMMAND characteristic uuid: ' + characteristic);
-    Logger.debug(this.getCharacteristic(characteristic));
-
-    this.getCharacteristic(characteristic).write(buffer, true);
+    this.getCharacteristic('fa' + characteristic).write(buffer, true);
   }
 };
