@@ -1,5 +1,6 @@
 const DroneCommandArgument = require('./DroneCommandArgument');
 const Enum = require('./util/Enum');
+const { characteristicSendUuids } = require('./CharacteristicEnums');
 
 const bufferType = new Enum({
   ACK: 0x02, // Acknowledgment of previously received data
@@ -10,25 +11,13 @@ const bufferType = new Enum({
   DATA_WITH_ACK: 0x04, // Data requesting an ack. The receiver must send an ack for this data unit!
 });
 
-const bufferCharTranslationMap = {
+const bufferCharTranslationMap = new Enum({
   ACK: 'ACK_COMMAND',
   DATA: 'SEND_NO_ACK',
   NON_ACK: 'SEND_NO_ACK',
   HIGH_PRIO: 'SEND_HIGH_PRIORITY',
   LOW_LATENCY_DATA: 'SEND_NO_ACK',
   DATA_WITH_ACK: 'SEND_WITH_ACK',
-};
-
-// the following characteristic UUID segments come from the documentation at
-// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
-// the 4th bytes are used to identify the characteristic
-// the usage of the channels are also documented here
-// http://forum.developer.parrot.com/t/ble-characteristics-of-minidrones/5912/2
-const characteristicSendUuids = new Enum({
-  SEND_NO_ACK: '0a', // not-ack commands (PCMD only)
-  SEND_WITH_ACK: '0b', // ack commands (all piloting commands)
-  SEND_HIGH_PRIORITY: '0c', // emergency commands
-  ACK_COMMAND: '1e', // ack for data sent on 0e
 });
 
 /**
@@ -193,7 +182,13 @@ module.exports = class DroneCommand {
    * @returns {DroneCommand} - Cloned instance
    */
   clone() {
-    return new this.constructor(this._project, this._class, this._command);
+    const command = new this.constructor(this._project, this._class, this._command);
+
+    for (let i = 0; i < this.arguments.length; i++) {
+      command.arguments[i].value = this.arguments[i].value;
+    }
+
+    return command;
   }
 
   /**

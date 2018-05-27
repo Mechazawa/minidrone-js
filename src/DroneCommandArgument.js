@@ -6,6 +6,7 @@ const Enum = require('./util/Enum');
  * Used for storing command arguments
  *
  * @property {Enum|undefined} enum - Enum store containing possible enum values if `this.type === 'enum'`. If set then `this.hasEnumProperty === true`.
+ * @todo allow boolean values for u8 and i8 params
  */
 module.exports = class DroneCommandArgument {
   /**

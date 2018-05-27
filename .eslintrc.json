@@ -19,6 +19,7 @@
     "no-cond-assign": [1,"always"],
     "no-console": [1, {"allow": ["warn", "error"]}],
     "no-constant-condition": 1,
+    "no-case-declarations": 0,
     "no-control-regex": 1,
     "no-debugger": 2,
     "no-dupe-args": 2,

@@ -2,6 +2,7 @@ const EventEmitter = require('events');
 const Logger = require('winston');
 const Enum = require('./util/Enum');
 const CommandParser = require('./CommandParser');
+const { characteristicSendUuids, characteristicReceiveUuids } = require('./CharacteristicEnums');
 
 const MANUFACTURER_SERIALS = [
   '4300cf1900090100',
@@ -29,7 +30,7 @@ const handshakeUuids = [
 // the following UUID segments come from the Mambo and from the documenation at
 // http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
 // the 3rd and 4th bytes are used to identify the service
-const serviceUuids = {
+const serviceUuids = new Enum({
   'fa': 'ARCOMMAND_SENDING_SERVICE',
   'fb': 'ARCOMMAND_RECEIVING_SERVICE',
   'fc': 'PERFORMANCE_COUNTER_SERVICE',
@@ -38,18 +39,6 @@ const serviceUuids = {
   'fe00': 'UPDATE_RFCOMM_SERVICE',
   '1800': 'Device Info',
   '1801': 'unknown',
-};
-
-// the following characteristic UUID segments come from the documentation at
-// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
-// the 4th bytes are used to identify the characteristic
-// the types of commands and data coming back are also documented here
-// http://forum.developer.parrot.com/t/ble-characteristics-of-minidrones/5912/2
-const characteristicReceiveUuids = new Enum({
-  ACK_DRONE_DATA: '0e', // drone data that needs an ack (needs to be ack on 1e)
-  NO_ACK_DRONE_DATA: '0f', // data from drone (including battery and others), no ack
-  ACK_COMMAND_SENT: '1b', // ack 0b channel, SEND_WITH_ACK
-  ACK_HIGH_PRIORITY: '1c', // ack 0c channel, SEND_HIGH_PRIORITY
 });
 
 /**
@@ -172,6 +161,17 @@ module.exports = class DroneConnection extends EventEmitter {
       // also validate that they're also present
       this.characteristics = characteristics;
 
+      if (Logger.level === 'debug') {
+        Logger.debug('Found the following characteristics:');
+
+        // Get uuids
+        const characteristicUuids = this.characteristics.map(x => x.uuid.substr(4, 4).toLowerCase());
+
+        characteristicUuids.sort();
+
+        characteristicUuids.join(', ').replace(/([^\n]{40,}?), /g, '$1|').split('|').map(s => Logger.debug(s));
+      }
+
       Logger.debug('Preforming handshake');
       for (const uuid of handshakeUuids) {
         const target = this.getCharacteristic(uuid);
@@ -179,7 +179,7 @@ module.exports = class DroneConnection extends EventEmitter {
         target.subscribe();
       }
 
-      Logger.debug('Adding listeners');
+      Logger.debug('Adding listeners (fb uuid prefix)');
       for (const uuid of characteristicReceiveUuids.values()) {
         const target = this.getCharacteristic('fb' + uuid);
 
@@ -242,16 +242,41 @@ module.exports = class DroneConnection extends EventEmitter {
   /**
    * Send a command to the drone and execute it
    * @param {DroneCommand} command - Command instance to be ran
+   * @returns {Promise} - Resolves when the command has been received (if ack is required)
+   * @async
    */
   runCommand(command) {
-    Logger.debug('SEND: ', command.toString());
-
     const buffer = command.toBuffer();
-    const messageId = this._getStep(command.bufferType);
+    const packetId = this._getStep(command.bufferType);
 
-    buffer.writeUIntLE(messageId, 1, 1);
+    buffer.writeUIntLE(packetId, 1, 1);
 
-    this.getCharacteristic(command.sendCharacteristicUuid).write(buffer, true);
+    Logger.debug(`SEND ${command.bufferType}[${packetId}]: `, command.toString());
+
+    return new Promise(accept => {
+      this.getCharacteristic(command.sendCharacteristicUuid).write(buffer, true);
+
+      switch (command.bufferType) {
+        case 'DATA_WITH_ACK':
+        case 'SEND_WITH_ACK':
+          if (!this._commandCallback['ACK_COMMAND_SENT']) {
+            this._commandCallback['ACK_COMMAND_SENT'] = [];
+          }
+
+          this._commandCallback['ACK_COMMAND_SENT'][packetId] = accept;
+          break;
+        case 'SEND_HIGH_PRIORITY':
+          if (!this._commandCallback['ACK_HIGH_PRIORITY']) {
+            this._commandCallback['ACK_HIGH_PRIORITY'] = [];
+          }
+
+          this._commandCallback['ACK_HIGH_PRIORITY'][packetId] = accept;
+          break;
+        default:
+          accept();
+          break;
+      }
+    });
   }
 
   /**
@@ -267,24 +292,31 @@ module.exports = class DroneConnection extends EventEmitter {
     switch (channel) {
       case 'ACK_DRONE_DATA':
         // We need to response with an ack
-        this._updateSensors(buffer.slice(2), true);
+        this._updateSensors(buffer, true);
         break;
       case 'NO_ACK_DRONE_DATA':
-        this._updateSensors(buffer.slice(2), false);
+        this._updateSensors(buffer);
         break;
       case 'ACK_COMMAND_SENT':
       case 'ACK_HIGH_PRIORITY':
-        callback = this._commandCallback[channel];
+        const packetId = buffer.readUInt8(2);
 
-        delete this._commandCallback[channel];
+        callback = (this._commandCallback[channel] || {})[packetId];
+
+        if (callback) {
+          delete this._commandCallback[channel][packetId];
+        }
 
         if (typeof callback === 'function') {
+          Logger.debug(`${channel}: packet id ${packetId}`);
           callback();
+        } else {
+          Logger.debug(`${channel}: packet id ${packetId}, no callback  :(`);
         }
 
         break;
       default:
-        Logger.warn(`Got data on an unknown channel ${channel} (wtf!?)`);
+        Logger.warn(`Got data on an unknown channel ${channel}(${channelUuid}) (wtf!?)`);
         break;
     }
   }
@@ -292,19 +324,19 @@ module.exports = class DroneConnection extends EventEmitter {
   /**
    * Update the sensor
    *
-   * @param {Buffer} buffer - Buffer containing just the command info
+   * @param {Buffer} buffer - Command buffer
    * @param {boolean} ack - If an acknowledgement for receiving the data should be sent
    * @private
    * @fires DroneConnection#sensor:
    * @todo implement ack
    */
   _updateSensors(buffer, ack = false) {
-    if (buffer[0] === 0) {
+    if (buffer[2] === 0) {
       return;
     }
 
     try {
-      const command = this.parser.parseBuffer(buffer);
+      const command = this.parser.parseBuffer(buffer.slice(2));
       const token = [command.projectName, command.className, command.commandName].join('-');
 
       this._sensorStore[token] = command;
@@ -328,6 +360,12 @@ module.exports = class DroneConnection extends EventEmitter {
     } catch (e) {
       Logger.warn('Unable to parse packet:', buffer);
       Logger.warn(e);
+    }
+
+    if (ack) {
+      const packetId = buffer.readUInt8(1);
+
+      this.ack(packetId);
     }
   }
 
@@ -385,7 +423,7 @@ module.exports = class DroneConnection extends EventEmitter {
   /**
    * used to count the drone command steps
    * @param {string} id - Step store id
-   * @returns {number}
+   * @returns {number} - step number
    */
   _getStep(id) {
     if (typeof this._stepStore[id] === 'undefined') {
@@ -398,5 +436,22 @@ module.exports = class DroneConnection extends EventEmitter {
     this._stepStore[id] &= 0xFF;
 
     return out;
+  }
+
+  /**
+   * Acknowledge a packet
+   * @param {number} packetId - Id of the packet to ack
+   */
+  ack(packetId) {
+    Logger.debug('ACK: packet id ' + packetId);
+
+    const characteristic = characteristicSendUuids.ACK_COMMAND;
+    const buffer = new Buffer(3);
+
+    buffer.writeUIntLE(characteristic, 0, 1);
+    buffer.writeUIntLE(this._getStep(characteristic), 1, 1);
+    buffer.writeUIntLE(packetId, 2, 1);
+
+    this.getCharacteristic('fa' + characteristic).write(buffer, true);
   }
 };
