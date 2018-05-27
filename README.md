@@ -53,17 +53,25 @@ const takeoff = parser.getCommand('minidrone', 'Piloting', 'TakeOff');
 const landing = parser.getCommand('minidrone', 'Piloting', 'Landing');
 const backFlip = parser.getCommand('minidrone', 'Animations', 'Flip', {direction: 'back'});
 
+/** Helper function */
+function sleep(ms) {
+  return new Promise(a => setTimeout(a, ms));
+}
 
-
-drone.on('connected', () => {
+drone.on('connected', async () => {
   // Makes the code a bit clearer
   const runCommand = x => drone.runCommand(x);
 
-  runCommand(takeoff);
+  await runCommand(takeoff);
+  
+  await sleep(2000);
+  await runCommand(backFlip);
+  
+  await sleep(2000);
+  await runCommand(landing);
 
-  setTimeout(runCommand, 2000, backFlip);
-  setTimeout(runCommand, 4000, landing);
-  setTimeout(process.exit, 5000);
+  await sleep(5000);
+  process.exit();
 });
 ```
 
