@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: util/Enum.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: util/Enum.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const { constant: constantCase } = require('case');
+const { getTypeName } = require('./reflection');
+
+/**
+ * Base enum class
+ * @example
+ * const Colors = new Enum(['RED', 'BLACK', 'GREEN', 'WHITE', 'BLUE']);
+ *
+ * const Answers = new Enum({
+ *   YES: true,
+ *   NO: false,
+ *   // Passing functions as values will turn them into getters
+ *   // Getter results will appear in ::values
+ *   MAYBE: () => Math.random() >= 0.5,
+ * });
+ *
+ * const FontStyles = new Enum(['italic', 'bold', 'underline', 'regular'], true);
+ * FontStyles.ITALIC === 'italic'
+ * FontStyles.BOLD   === 'bold'
+ *
+ * // etc...
+ */
+class Enum {
+  /**
+   * @param {Object&lt;String, *>|Array&lt;String>} enums - Data to build the enum from
+   * @param {boolean} auto - Auto generate enum from data making assumptions about
+   *                         the data, requires enums to be of type array.
+   */
+  constructor(enums, auto = false) {
+    const isArray = enums instanceof Array;
+
+    if (auto &amp;&amp; !isArray) {
+      throw new TypeError(`Expected enums to be of type "Array" got "${getTypeName(enums)}"`);
+    }
+
+    if (isArray &amp;&amp; auto) {
+      for (const row of enums) {
+        const key = constantCase(row);
+
+        Object.defineProperty(this, key, {
+          enumerable: true,
+          value: row,
+        });
+      }
+    } else if (isArray) {
+      for (const key of enums) {
+        Object.defineProperty(this, key, {
+          enumerable: true,
+          value: Enum._iota,
+        });
+      }
+    } else {
+      for (const key of Object.keys(enums)) {
+        const init = { enumerable: true };
+
+        if (typeof enums[key] === 'function') {
+          init.get = enums[key];
+        } else {
+          init.value = enums[key];
+        }
+
+        Object.defineProperty(this, key, init);
+      }
+    }
+
+    Object.freeze(this);
+  }
+
+  /**
+   * List enum keys
+   * @returns {Array} - Enum keys
+   */
+  keys() {
+    return Object.keys(this);
+  }
+
+  /**
+   * List enum values
+   * @returns {Array&lt;*>} - Enum values
+   */
+  values() {
+    return this.keys()
+      .map(key => this[key])
+      .filter((v, i, s) => s.indexOf(v) === i);
+  }
+
+  /**
+   * Find if a key exists
+   * @param {string|number|*} name - Enum value name
+   * @returns {boolean} - key exists
+   */
+  hasKey(name) {
+    return this.keys().includes(name);
+  }
+
+  /**
+   * Find if a key exists
+   * @param {string|number|*} value - Enum value
+   * @returns {boolean} - value exists
+   */
+  hasValue(value) {
+    return this.values().includes(value);
+  }
+
+  /**
+   * Find key name for value
+   * @param {string|number|*} value - Enum value
+   * @returns {string} - key name
+   */
+  findForValue(value) {
+    const index = this.keys().map(key => this[key]).findIndex(x => x === value);
+
+    return this.keys()[index];
+  }
+
+  /**
+   * Auto incrementing integer
+   * @returns {number} - enum value
+   * @private
+   */
+  static get _iota() {
+    if (!Enum.__iota) {
+      Enum.__iota = 0;
+    }
+
+    return Enum.__iota++;
+  }
+
+  /**
+   * Get a string representation of the enum
+   * @returns {string} - String representation of the enum
+   */
+  toString() {
+    return this.keys().map(key => key + '=' + this[key]).join(', ');
+  }
+}
+
+module.exports = Enum;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="CommandParser.html">CommandParser</a></li><li><a href="DroneCommand.html">DroneCommand</a></li><li><a href="DroneCommandArgument.html">DroneCommandArgument</a></li><li><a href="DroneConnection.html">DroneConnection</a></li><li><a href="Enum.html">Enum</a></li><li><a href="InvalidCommandError.html">InvalidCommandError</a></li></ul><h3>Events</h3><ul><li><a href="DroneCommand.html#event:connected">connected</a></li><li><a href="DroneCommand.html#event:disconnected">disconnected</a></li><li><a href="DroneConnection.html#event:sensor:">sensor:</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ARDiscoveryError">ARDiscoveryError</a></li><li><a href="global.html#bufferType">bufferType</a></li><li><a href="global.html#characteristicReceiveUuids">characteristicReceiveUuids</a></li><li><a href="global.html#characteristicSendUuids">characteristicSendUuids</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sun May 27 2018 04:57:30 GMT+0200 (CEST)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
