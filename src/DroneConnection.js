@@ -161,6 +161,17 @@ module.exports = class DroneConnection extends EventEmitter {
       // also validate that they're also present
       this.characteristics = characteristics;
 
+      if (Logger.level === 'debug') {
+        Logger.debug('Found the following characteristics:');
+
+        // Get uuids
+        const characteristicUuids = this.characteristics.map(x => x.uuid.substr(4, 4).toLowerCase());
+
+        characteristicUuids.sort();
+
+        characteristicUuids.join(', ').replace(/([^\n]{40,}?), /g, '$1|').split('|').map(s => Logger.debug(s));
+      }
+
       Logger.debug('Preforming handshake');
       for (const uuid of handshakeUuids) {
         const target = this.getCharacteristic(uuid);
@@ -231,16 +242,41 @@ module.exports = class DroneConnection extends EventEmitter {
   /**
    * Send a command to the drone and execute it
    * @param {DroneCommand} command - Command instance to be ran
+   * @returns {Promise} - Resolves when the command has been received (if ack is required)
+   * @async
    */
   runCommand(command) {
-    Logger.debug('SEND: ', command.toString());
-
     const buffer = command.toBuffer();
-    const messageId = this._getStep(command.bufferType);
+    const packetId = this._getStep(command.bufferType);
 
-    buffer.writeUIntLE(messageId, 1, 1);
+    buffer.writeUIntLE(packetId, 1, 1);
 
-    this.getCharacteristic(command.sendCharacteristicUuid).write(buffer, true);
+    Logger.debug(`SEND ${command.bufferType}[${packetId}]: `, command.toString());
+
+    return new Promise(accept => {
+      this.getCharacteristic(command.sendCharacteristicUuid).write(buffer, true);
+
+      switch (command.bufferType) {
+        case 'DATA_WITH_ACK':
+        case 'SEND_WITH_ACK':
+          if (!this._commandCallback['ACK_COMMAND_SENT']) {
+            this._commandCallback['ACK_COMMAND_SENT'] = [];
+          }
+
+          this._commandCallback['ACK_COMMAND_SENT'][packetId] = accept;
+          break;
+        case 'SEND_HIGH_PRIORITY':
+          if (!this._commandCallback['ACK_HIGH_PRIORITY']) {
+            this._commandCallback['ACK_HIGH_PRIORITY'] = [];
+          }
+
+          this._commandCallback['ACK_HIGH_PRIORITY'][packetId] = accept;
+          break;
+        default:
+          accept();
+          break;
+      }
+    });
   }
 
   /**
@@ -263,17 +299,24 @@ module.exports = class DroneConnection extends EventEmitter {
         break;
       case 'ACK_COMMAND_SENT':
       case 'ACK_HIGH_PRIORITY':
-        callback = this._commandCallback[channel];
+        const packetId = buffer.readUInt8(2);
 
-        delete this._commandCallback[channel];
+        callback = (this._commandCallback[channel] || {})[packetId];
+
+        if (callback) {
+          delete this._commandCallback[channel][packetId];
+        }
 
         if (typeof callback === 'function') {
+          Logger.debug(`${channel}: packet id ${packetId}`);
           callback();
+        } else {
+          Logger.debug(`${channel}: packet id ${packetId}, no callback  :(`);
         }
 
         break;
       default:
-        Logger.warn(`Got data on an unknown channel ${channel} (wtf!?)`);
+        Logger.warn(`Got data on an unknown channel ${channel}(${channelUuid}) (wtf!?)`);
         break;
     }
   }
@@ -399,7 +442,7 @@ module.exports = class DroneConnection extends EventEmitter {
    * Acknowledge a packet
    * @param {number} packetId - Id of the packet to ack
    */
-  _ack(packetId) {
+  ack(packetId) {
     Logger.info('ACK: ' + packetId);
 
     const characteristic = characteristicSendUuids.ACK_COMMAND;
@@ -408,6 +451,9 @@ module.exports = class DroneConnection extends EventEmitter {
     buffer.writeUIntLE(characteristic, 0, 1);
     buffer.writeUIntLE(this._getStep(characteristic), 1, 1);
     buffer.writeUIntLE(packetId, 2, 1);
+
+    Logger.debug('ACK_COMMAND characteristic uuid: ' + characteristic);
+    Logger.debug(this.getCharacteristic(characteristic));
 
     this.getCharacteristic(characteristic).write(buffer, true);
   }
