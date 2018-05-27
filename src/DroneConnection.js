@@ -156,9 +156,6 @@ class DroneConnection extends EventEmitter {
         throw err;
       }
 
-      // @todo
-      // Parse characteristics and only store the ones needed
-      // also validate that they're also present
       this.characteristics = characteristics;
 
       if (Logger.level === 'debug') {
@@ -328,7 +325,6 @@ class DroneConnection extends EventEmitter {
    * @param {boolean} ack - If an acknowledgement for receiving the data should be sent
    * @private
    * @fires DroneConnection#sensor:
-   * @todo implement ack
    */
   _updateSensors(buffer, ack = false) {
     if (buffer[2] === 0) {
