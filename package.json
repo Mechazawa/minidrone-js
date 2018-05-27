@@ -18,14 +18,12 @@
   },
   "devDependencies": {
     "ava": "0.25.0",
-    "esdoc": "1.1.0",
-    "esdoc-ecmascript-proposal-plugin": "1.0.0",
-    "esdoc-standard-plugin": "1.0.0",
-    "eslint": "4.19.1"
+    "eslint": "4.19.1",
+    "minami-compat": "^1.2.4"
   },
   "scripts": {
     "test": "echo No tests defined",
-    "docs": "npx esdoc",
+    "docs": "npx jsdoc --configure .jsdoc.json --verbose && rm -r docs && mv build/docs/minidrone-js/* docs && rm -r build/docs",
     "lint": "npx eslint src --fix --cache"
   }
 }
