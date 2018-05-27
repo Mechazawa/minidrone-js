@@ -248,9 +248,9 @@ class DroneConnection extends EventEmitter {
 
     buffer.writeUIntLE(packetId, 1, 1);
 
-    Logger.debug(`SEND ${command.bufferType}[${packetId}]: `, command.toString());
-
     return new Promise(accept => {
+      Logger.debug(`SEND ${command.bufferType}[${packetId}]: `, command.toString());
+
       this.getCharacteristic(command.sendCharacteristicUuid).write(buffer, true);
 
       switch (command.bufferType) {
