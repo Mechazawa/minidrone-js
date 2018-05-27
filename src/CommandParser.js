@@ -9,7 +9,7 @@ const resolve = require('resolve');
 /**
  * Command parser used for looking up commands in the xml definition
  */
-module.exports = class CommandParser {
+class CommandParser {
   /**
    * CommandParser constructor
    */
@@ -294,4 +294,6 @@ module.exports = class CommandParser {
 
     return this.__arsdkPath;
   }
-};
+}
+
+module.exports = CommandParser;

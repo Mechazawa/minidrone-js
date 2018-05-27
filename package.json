@@ -19,11 +19,12 @@
   "devDependencies": {
     "ava": "0.25.0",
     "eslint": "4.19.1",
+    "jsdoc": "^3.5.5",
     "minami-compat": "^1.2.4"
   },
   "scripts": {
     "test": "echo No tests defined",
-    "docs": "npx jsdoc --configure .jsdoc.json --verbose && rm -r docs && mv build/docs/minidrone-js/* docs && rm -r build/docs",
+    "docs": "npx jsdoc --configure .jsdoc.json --verbose; mkdir -p docs; rm -r docs; mv build/docs/minidrone-js/* docs; rm -r build/docs",
     "lint": "npx eslint src --fix --cache"
   }
 }

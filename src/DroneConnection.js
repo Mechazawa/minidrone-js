@@ -51,7 +51,7 @@ const serviceUuids = new Enum({
  * @fires DroneCommand#sensor:
  * @property {CommandParser} parser - {@link CommandParser} instance
  */
-module.exports = class DroneConnection extends EventEmitter {
+class DroneConnection extends EventEmitter {
   /**
    * Creates a new DroneConnection instance
    * @param {string} [droneFilter=] - The drone name leave blank for no filter
@@ -454,4 +454,6 @@ module.exports = class DroneConnection extends EventEmitter {
 
     this.getCharacteristic('fa' + characteristic).write(buffer, true);
   }
-};
+}
+
+module.exports = DroneConnection;

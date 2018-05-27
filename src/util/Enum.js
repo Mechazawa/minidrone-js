@@ -20,7 +20,7 @@ const { getTypeName } = require('./reflection');
  *
  * // etc...
  */
-module.exports = class Enum {
+class Enum {
   /**
    * @param {Object<String, *>|Array<String>} enums - Data to build the enum from
    * @param {boolean} auto - Auto generate enum from data making assumptions about
@@ -133,4 +133,6 @@ module.exports = class Enum {
   toString() {
     return this.keys().map(key => key + '=' + this[key]).join(', ');
   }
-};
+}
+
+module.exports = Enum;

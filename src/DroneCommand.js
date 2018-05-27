@@ -2,13 +2,25 @@ const DroneCommandArgument = require('./DroneCommandArgument');
 const Enum = require('./util/Enum');
 const { characteristicSendUuids } = require('./CharacteristicEnums');
 
+/**
+ * Buffer types
+ *
+ * @property {number} ACK - Acknowledgment of previously received data
+ * @property {number} DATA - Normal data (no ack requested)
+ * @property {number} NON_ACK - Same as DATA
+ * @property {number} HIGH_PRIO - Not sure about this one could be LLD
+ * @property {number} LOW_LATENCY_DATA - Treated as normal data on the network, but are given higher priority internally
+ * @property {number} DATA_WITH_ACK - Data requesting an ack. The receiver must send an ack for this data unit!
+ *
+ * @type {Enum}
+ */
 const bufferType = new Enum({
-  ACK: 0x02, // Acknowledgment of previously received data
-  DATA: 0x02, // Normal data (no ack requested)
-  NON_ACK: 0x02, // Same as DATA
-  HIGH_PRIO: 0x02, // Not sure about this one could be LLD
-  LOW_LATENCY_DATA: 0x03, // Treated as normal data on the network, but are given higher priority internally
-  DATA_WITH_ACK: 0x04, // Data requesting an ack. The receiver must send an ack for this data unit!
+  ACK: 0x02,
+  DATA: 0x02,
+  NON_ACK: 0x02,
+  HIGH_PRIO: 0x02,
+  LOW_LATENCY_DATA: 0x03,
+  DATA_WITH_ACK: 0x04,
 });
 
 const bufferCharTranslationMap = new Enum({
@@ -39,7 +51,7 @@ const bufferCharTranslationMap = new Enum({
  *
  * drone.runCommand(backFlip);
  */
-module.exports = class DroneCommand {
+class DroneCommand {
   /**
    * Creates a new DroneCommand instance
    * @param {object} project - Project node from the xml spec
@@ -323,4 +335,6 @@ module.exports = class DroneCommand {
   getToken() {
     return [this.projectName, this.className, this.commandName].join('-');
   }
-};
+}
+
+module.exports = DroneCommand;

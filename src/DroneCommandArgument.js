@@ -8,7 +8,7 @@ const Enum = require('./util/Enum');
  * @property {Enum|undefined} enum - Enum store containing possible enum values if `this.type === 'enum'`. If set then `this.hasEnumProperty === true`.
  * @todo allow boolean values for u8 and i8 params
  */
-module.exports = class DroneCommandArgument {
+class DroneCommandArgument {
   /**
    * Command argument constructor
    * @param {object} raw - Raw command argument data from the xml specification
@@ -212,4 +212,6 @@ module.exports = class DroneCommandArgument {
 
     return `(${this.type})${this.name}=${value}`;
   }
-};
+}
+
+module.exports = DroneCommandArgument;

@@ -2,6 +2,7 @@
   "tags": {
     "allowUnknownTags": true,
     "dictionaries": ["jsdoc"]
+
   },
   "source": {
     "include": ["src", "package.json", "README.md"],
@@ -21,7 +22,7 @@
     "destination": "./build/docs",
     "encoding": "utf8",
     "private": false,
-    "recurse": false,
-    "template": "./node_modules/minami-compat/"
+    "recurse": true
+//    "template": "./node_modules/minami-compat/"
   }
 }

@@ -6,6 +6,16 @@ const Enum = require('./util/Enum');
 // the usage of the channels are also documented here
 // http://forum.developer.parrot.com/t/ble-characteristics-of-minidrones/5912/2
 
+/**
+ * Send characteristsic UUIDs
+ *
+ * @property {string} SEND_NO_ACK - not-ack commands (PCMD only)
+ * @property {string} SEND_WITH_ACK - ack commands (all piloting commands)
+ * @property {string} SEND_HIGH_PRIORITY - emergency commands
+ * @property {string} ACK_COMMAND - ack for data sent on 0e
+ *
+ * @type {Enum}
+ */
 const characteristicSendUuids = new Enum({
   SEND_NO_ACK: '0a', // not-ack commands (PCMD only)
   SEND_WITH_ACK: '0b', // ack commands (all piloting commands)
@@ -13,6 +23,16 @@ const characteristicSendUuids = new Enum({
   ACK_COMMAND: '1e', // ack for data sent on 0e
 });
 
+/**
+ * Receive characteristsic UUIDs
+ *
+ * @property {string} ACK_DRONE_DATA - drone data that needs an ack (needs to be ack on 1e)
+ * @property {string} NO_ACK_DRONE_DATA - data from drone (including battery and others), no ack
+ * @property {string} ACK_COMMAND_SENT - ack 0b channel, SEND_WITH_ACK
+ * @property {string} ACK_HIGH_PRIORITY - ack 0c channel, SEND_HIGH_PRIORITY
+ *
+ * @type {Enum}
+ */
 const characteristicReceiveUuids = new Enum({
   ACK_DRONE_DATA: '0e', // drone data that needs an ack (needs to be ack on 1e)
   NO_ACK_DRONE_DATA: '0f', // data from drone (including battery and others), no ack
