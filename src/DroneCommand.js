@@ -181,6 +181,14 @@ class DroneCommand {
   }
 
   /**
+   * If the command should be acknowledged upon receiving
+   * @returns {boolean} - Should ack
+   */
+  get shouldAck() {
+    return ['DATA_WITH_ACK', 'SEND_WITH_ACK', 'SEND_HIGH_PRIORITY'].includes(this.bufferType);
+  }
+
+  /**
    * Checks if the command has a certain argument
    * @param {string} key - Argument name
    * @returns {boolean} - If the argument exists
