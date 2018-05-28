@@ -173,12 +173,13 @@ class DroneConnection extends EventEmitter {
       for (const uuid of handshakeUuids) {
         const target = this.getCharacteristic(uuid);
 
+        // @todo Function needs a callback, should investigate
         target.subscribe();
       }
 
       Logger.debug('Adding listeners (fb uuid prefix)');
       for (const uuid of characteristicReceiveUuids.values()) {
-        const target = this.getCharacteristic('fb' + uuid);
+        const target = this.getCharacteristic(uuid);
 
         target.subscribe();
         target.on('data', data => this._handleIncoming(uuid, data));
@@ -251,28 +252,13 @@ class DroneConnection extends EventEmitter {
     return new Promise(accept => {
       Logger.debug(`SEND ${command.bufferType}[${packetId}]: `, command.toString());
 
-      this.getCharacteristic(command.sendCharacteristicUuid).write(buffer, true);
-
-      switch (command.bufferType) {
-        case 'DATA_WITH_ACK':
-        case 'SEND_WITH_ACK':
-          if (!this._commandCallback['ACK_COMMAND_SENT']) {
-            this._commandCallback['ACK_COMMAND_SENT'] = [];
-          }
-
-          this._commandCallback['ACK_COMMAND_SENT'][packetId] = accept;
-          break;
-        case 'SEND_HIGH_PRIORITY':
-          if (!this._commandCallback['ACK_HIGH_PRIORITY']) {
-            this._commandCallback['ACK_HIGH_PRIORITY'] = [];
-          }
-
-          this._commandCallback['ACK_HIGH_PRIORITY'][packetId] = accept;
-          break;
-        default:
-          accept();
-          break;
+      if (command.shouldAck) {
+        this._commandCallback[packetId] = accept;
+      } else {
+        accept();
       }
+
+      this.getCharacteristic(command.sendCharacteristicUuid).write(buffer, true);
     });
   }
 
@@ -298,10 +284,10 @@ class DroneConnection extends EventEmitter {
       case 'ACK_HIGH_PRIORITY':
         const packetId = buffer.readUInt8(2);
 
-        callback = (this._commandCallback[channel] || {})[packetId];
+        callback = this._commandCallback[packetId];
 
         if (callback) {
-          delete this._commandCallback[channel][packetId];
+          delete this._commandCallback[packetId];
         }
 
         if (typeof callback === 'function') {
@@ -337,7 +323,7 @@ class DroneConnection extends EventEmitter {
 
       this._sensorStore[token] = command;
 
-      Logger.debug('RECV:', command.toString());
+      Logger.debug(`RECV ${command.bufferType}:`, command.toString());
 
       /**
        * Fires when a new sensor reading has been received
@@ -448,7 +434,7 @@ class DroneConnection extends EventEmitter {
     buffer.writeUIntLE(this._getStep(characteristic), 1, 1);
     buffer.writeUIntLE(packetId, 2, 1);
 
-    this.getCharacteristic('fa' + characteristic).write(buffer, true);
+    this.getCharacteristic(characteristic).write(buffer, true);
   }
 }
 

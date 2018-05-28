@@ -177,7 +177,7 @@ class DroneCommand {
   get sendCharacteristicUuid() {
     const t = bufferCharTranslationMap[this.bufferType] || 'SEND_WITH_ACK';
 
-    return 'fa' + characteristicSendUuids[t];
+    return characteristicSendUuids[t];
   }
 
   /**
