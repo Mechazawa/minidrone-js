@@ -1977,7 +1977,7 @@ jsbn@~0.1.0:
   version "0.1.1"
   resolved "https://registry.yarnpkg.com/jsbn/-/jsbn-0.1.1.tgz#a5e654c2e5a2deb5f201d96cefbca80c0ef2f513"
 
-jsdoc@^3.5.5:
+jsdoc@3.5.5:
   version "3.5.5"
   resolved "https://registry.yarnpkg.com/jsdoc/-/jsdoc-3.5.5.tgz#484521b126e81904d632ff83ec9aaa096708fa4d"
   dependencies:
@@ -2260,7 +2260,7 @@ mimic-fn@^1.0.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/mimic-fn/-/mimic-fn-1.2.0.tgz#820c86a39334640e99516928bd03fca88057d022"
 
-minami-compat@^1.2.4:
+minami-compat@1.2.4:
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/minami-compat/-/minami-compat-1.2.4.tgz#af6ba9d9178e1b0f2957d56d819c26a4f5e5c666"
 
