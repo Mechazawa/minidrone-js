@@ -26,4 +26,6 @@ drone.on('connected', async () => {
 
   await drone.runCommand(autoTakeOffOff);
   Logger.debug('Command got ACK\'d');
+
+  process.exit();
 });
