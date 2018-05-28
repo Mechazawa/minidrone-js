@@ -1,6 +1,7 @@
 const noble = require('noble');
 const EventEmitter = require('events');
 const Logger = require('winston');
+const Enum = require('../util/Enum');
 const { characteristicUuids, characteristicReceiveUuids } = require('../CharacteristicEnums');
 
 const MANUFACTURER_SERIALS = [
@@ -19,9 +20,35 @@ const DRONE_PREFIXES = [
   'NewZ_',
 ];
 
-class BLEConnector extends EventEmitter {
-  constructor() {
+// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
+const handshakeUuids = [
+  'fb0f', 'fb0e', 'fb1b', 'fb1c',
+  'fd22', 'fd23', 'fd24', 'fd52',
+  'fd53', 'fd54',
+];
 
+// the following UUID segments come from the Mambo and from the documenation at
+// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
+// the 3rd and 4th bytes are used to identify the service
+const serviceUuids = new Enum({
+  'fa': 'ARCOMMAND_SENDING_SERVICE',
+  'fb': 'ARCOMMAND_RECEIVING_SERVICE',
+  'fc': 'PERFORMANCE_COUNTER_SERVICE',
+  'fd21': 'NORMAL_BLE_FTP_SERVICE',
+  'fd51': 'UPDATE_BLE_FTP',
+  'fe00': 'UPDATE_RFCOMM_SERVICE',
+  '1800': 'Device Info',
+  '1801': 'unknown',
+});
+
+class BLEConnector extends EventEmitter {
+  constructor (droneFilter = '') {
+    super();
+
+    this.droneFilter = droneFilter;
+
+    this._characteristicLookupCache = {};
+    this.characteristics = [];
   }
 
   connect() {
@@ -54,7 +81,7 @@ class BLEConnector extends EventEmitter {
       return;
     }
 
-    Logger.info(`Peripheral found ${peripheral.advertisement.localName}`); //ex: Mambo_646859
+    Logger.info(`Peripheral found ${peripheral.advertisement.localName}`); // ex: Mambo_646859
 
     noble.stopScanning();
 
@@ -119,14 +146,15 @@ class BLEConnector extends EventEmitter {
         const target = this.getCharacteristic(uuid);
 
         target.subscribe();
+        target.on('data', data => this.emit('data', data));
       }
 
-      Logger.debug('Adding listeners (fb uuid prefix)');
+      Logger.debug('Adding listeners: ' + characteristicReceiveUuids.values().join(', '));
       for (const uuid of characteristicReceiveUuids.values()) {
-        const target = this.getCharacteristic('fb' + uuid);
+        const target = this.getCharacteristic(uuid);
 
         target.subscribe();
-        target.on('data', data => this._handleIncoming(uuid, data));
+        target.on('data', data => this.emit('data', data));
       }
 
       Logger.info(`Device connected ${this.peripheral.advertisement.localName}`);
@@ -174,8 +202,10 @@ class BLEConnector extends EventEmitter {
     return this._characteristicLookupCache[uuid];
   }
 
-  write(characteristic, buffer) {
-    this.getCharacteristic(characteristicUuids[characteristic]).write(buffer, true);
+  write(buffer, characteristic) {
+    return new Promise(accept => {
+      this.getCharacteristic(characteristic).write(buffer, true, accept);
+    });
   }
 
   disconnect() {
@@ -184,6 +214,10 @@ class BLEConnector extends EventEmitter {
     this.characteristics = [];
 
     this.emit('disconnected');
+  }
+
+  get connected() {
+    return this.characteristics.length > 0;
   }
 }
 
