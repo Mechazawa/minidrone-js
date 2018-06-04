@@ -1,7 +1,7 @@
 const DroneCommandArgument = require('./DroneCommandArgument');
 const Enum = require('./util/Enum');
 const { characteristicSendUuids } = require('./CharacteristicEnums');
-const { bufferType, bufferCharacteristicTranslationMap } = require('./BufferEnums');
+const { bufferType, bufferCharacteristicTranslationMap, bufferIds } = require('./BufferEnums');
 
 /**
  * Drone command
@@ -142,13 +142,19 @@ class DroneCommand {
   }
 
   /**
+   * Get the send characteristic
+   * @returns {string} - send characteristic
+   */
+  get sendCharacteristic() {
+    return bufferCharacteristicTranslationMap[this.bufferType] || 'SEND_WITH_ACK';
+  }
+
+  /**
    * Get the send characteristic uuid based on the buffer type
    * @returns {string} - uuid as a string
    */
   get sendCharacteristicUuid() {
-    const t = bufferCharacteristicTranslationMap[this.bufferType] || 'SEND_WITH_ACK';
-
-    return characteristicSendUuids[t];
+    return characteristicSendUuids[this.sendCharacteristic];
   }
 
   /**
@@ -188,20 +194,18 @@ class DroneCommand {
    * @throws TypeError
    */
   toBuffer() {
-    const bufferLength = 6 + this.arguments.reduce((acc, val) => val.getValueSize() + acc, 0);
+    let bufferOffset = 4;
+
+    const bufferLength = bufferOffset + this.arguments.reduce((acc, val) => val.getValueSize() + acc, 0);
     const buffer = new Buffer(bufferLength);
 
     buffer.fill(0);
 
-    buffer.writeUInt16LE(this.bufferFlag, 0);
-
     // Skip command counter (offset 1) because it's set in DroneConnection::runCommand
 
-    buffer.writeUInt16LE(this.projectId, 2);
-    buffer.writeUInt16LE(this.classId, 3);
-    buffer.writeUInt16LE(this.commandId, 4); // two bytes
-
-    let bufferOffset = 6;
+    buffer.writeUInt8(this.projectId, 0);
+    buffer.writeUInt8(this.classId, 1);
+    buffer.writeUInt16LE(this.commandId, 2); // two bytes
 
     for (const arg of this.arguments) {
       const valueSize = arg.getValueSize();
@@ -283,6 +287,10 @@ class DroneCommand {
    */
   get bufferType() {
     return this._buffer.toUpperCase();
+  }
+
+  get bufferId() {
+    return bufferIds[this.sendCharacteristic];
   }
 
   /**

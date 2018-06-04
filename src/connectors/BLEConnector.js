@@ -1,5 +1,5 @@
 const noble = require('noble');
-const EventEmitter = require('events');
+const BaseConnector = require('./BaseConnector');
 const Logger = require('winston');
 const Enum = require('../util/Enum');
 const { characteristicUuids, characteristicReceiveUuids } = require('../CharacteristicEnums');
@@ -41,8 +41,8 @@ const serviceUuids = new Enum({
   '1801': 'unknown',
 });
 
-class BLEConnector extends EventEmitter {
-  constructor (droneFilter = '') {
+class BLEConnector extends BaseConnector {
+  constructor(droneFilter = '') {
     super();
 
     this.droneFilter = droneFilter;
@@ -218,6 +218,31 @@ class BLEConnector extends EventEmitter {
 
   get connected() {
     return this.characteristics.length > 0;
+  }
+
+  sendCommand(command) {
+    const buffer = Buffer.concat([new Buffer(2), command.toBuffer()]);
+    const packetId = this._getStep(command.bufferFlag);
+
+    buffer.writeUInt16LE(command.bufferFlag, 0);
+    buffer.writeUInt8(packetId, 1);
+
+    return new Promise(accept => {
+      Logger.debug(`SEND ${command.bufferType}[${packetId}]: `, command.toString());
+
+      if (command.shouldAck) {
+        // @todo ack
+        // this._commandCallback[packetId] = accept;
+        setTimeout(accept, 100);
+      } else {
+        accept();
+      }
+      this.write(buffer, command.sendCharacteristicUuid);
+    });
+  }
+
+  ack() {
+
   }
 }
 

@@ -1,8 +1,6 @@
 const EventEmitter = require('events');
 const Logger = require('winston');
-const Enum = require('./util/Enum');
 const CommandParser = require('./CommandParser');
-const { characteristicSendUuids, characteristicReceiveUuids } = require('./CharacteristicEnums');
 const { bufferType } = require('./BufferEnums');
 
 /**
@@ -26,13 +24,17 @@ class DroneConnection extends EventEmitter {
 
     this._commandCallback = {};
     this._sensorStore = {};
-    this._stepStore = {};
 
     this.connector = connector;
 
     this.connector.on('disconnect', () => this.emit('disconnect'));
     this.connector.on('connected', () => this.emit('connected'));
     this.connector.on('data', data => this._handleIncoming(data));
+    this.connector.on('incoming', command => {
+      // @todo move code
+
+      this._sensorStore[command.getToken()] = command;
+    });
 
     this.parser = new CommandParser();
 
@@ -56,21 +58,7 @@ class DroneConnection extends EventEmitter {
    * @async
    */
   runCommand(command) {
-    const buffer = command.toBuffer();
-    const packetId = this._getStep(command.bufferFlag);
-
-    buffer.writeUIntLE(packetId, 1, 1);
-
-    return new Promise(accept => {
-      Logger.debug(`SEND ${command.bufferType}[${packetId}]: `, command.toString());
-
-      if (command.shouldAck) {
-        this._commandCallback[packetId] = accept;
-      } else {
-        accept();
-      }
-      this.connector.write(buffer, command.sendCharacteristicUuid);
-    });
+    return this.connector.sendCommand(command);
   }
 
   /**
@@ -80,11 +68,10 @@ class DroneConnection extends EventEmitter {
    * @private
    */
   _handleIncoming(buffer) {
-    const characteristic = bufferType.findForValue(buffer.readUInt8(0));
+    const type = bufferType.findForValue(buffer.readUInt8(0));
 
-    Logger.debug(buffer);
 
-    if (characteristic !== 'ACK') {
+    if (type !== 'ACK') {
       this._updateSensors(buffer);
     } else {
       // @todo figure out why two ACK's in a row are received
@@ -124,9 +111,7 @@ class DroneConnection extends EventEmitter {
       Logger.debug(`RECV ${command.bufferType}:`, command.toString());
 
       if (command.shouldAck) {
-        const packetId = buffer.readUInt8(1);
-
-        this.ack(packetId);
+        // @todo ack
       }
 
       /**
@@ -180,41 +165,6 @@ class DroneConnection extends EventEmitter {
     }
 
     return command;
-  }
-
-  /**
-   * used to count the drone command steps
-   * @param {string} id - Step store id
-   * @returns {number} - step number
-   * @todo steps should be grouped on bufferType (see bufferType enum)
-   */
-  _getStep(id) {
-    if (typeof this._stepStore[id] === 'undefined') {
-      this._stepStore[id] = 0;
-    }
-
-    const out = this._stepStore[id];
-
-    this._stepStore[id]++;
-    this._stepStore[id] &= 0xFF;
-
-    return out;
-  }
-
-  /**
-   * Acknowledge a packet
-   * @param {number} packetId - Id of the packet to ack
-   */
-  ack(packetId) {
-    Logger.debug('SEND ACK: packet id ' + packetId);
-
-    const buffer = new Buffer(3);
-
-    buffer.writeUIntLE(bufferType.ACK, 0, 1);
-    buffer.writeUIntLE(this._getStep(bufferType.ACK), 1, 1);
-    buffer.writeUIntLE(packetId, 2, 1);
-
-    this.connector.write(buffer, characteristicSendUuids.ACK_COMMAND);
   }
 }
 

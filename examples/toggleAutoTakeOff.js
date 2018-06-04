@@ -18,22 +18,19 @@ function sleep(ms) {
 
 drone.on('connected', async () => {
   await sleep(200);
-  drone.runCommand(allState);
-
-  await sleep(1000);
+  await drone.runCommand(allState);
 
   await drone.runCommand(autoTakeOffOn);
-  Logger.debug('Command got ACK\'d');
-
-  await sleep(2000);
-
-  await drone.runCommand(autoTakeOffOn);
-  Logger.debug('Command got ACK\'d');
 
   await sleep(2000);
 
   await drone.runCommand(autoTakeOffOff);
-  Logger.debug('Command got ACK\'d');
+
+  Logger.debug('values: ');
+
+  for (const command of Object.values(drone._sensorStore)) {
+    Logger.debug(command.toString(true));
+  }
 
   process.exit();
 });

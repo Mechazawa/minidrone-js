@@ -35,7 +35,22 @@ const bufferCharacteristicTranslationMap = new Enum({
   DATA_WITH_ACK: 'SEND_WITH_ACK',
 });
 
+const bufferIds = new Enum({
+  PING: 0, // pings from device
+  PONG: 1, // respond to pings
+  SEND_NO_ACK: 10,
+  SEND_WITH_ACK: 11,
+  SEND_HIGH_PRIORITY: 12, // emergency
+  VIDEO_ACK: 13, // ack for video
+  ACK_DRONE_DATA: 127, // drone data that needs an ack
+  ACK_COMMAND: 127,
+  NO_ACK_DRONE_DATA: 126, // data from drone (including battery and others), no ack
+  VIDEO_DATA: 125, // video data
+  ACK_FROM_SEND_WITH_ACK: 139, // 128 + buffer id for 'SEND_WITH_ACK' is 139
+});
+
 module.exports = {
   bufferType,
   bufferCharacteristicTranslationMap,
+  bufferIds,
 };
