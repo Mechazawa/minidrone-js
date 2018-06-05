@@ -193,7 +193,7 @@ class CommandParser {
           let c = ''; // Last character
 
           for (valueSize = 0; valueSize < buffer.length && c !== '\0'; valueSize++) {
-            c = String.fromCharCode(buffer[bufferOffset]);
+            c = String.fromCharCode(buffer[bufferOffset + valueSize]);
 
             value += c;
           }
