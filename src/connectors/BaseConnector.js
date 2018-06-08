@@ -2,6 +2,16 @@ const EventEmitter = require('events');
 const CommandParser = require('../CommandParser');
 const Logger = require('winston');
 
+/**
+ * Base drone connector
+ *
+ * @fires BaseConnector#connected
+ * @fires BaseConnector#disconnected
+ * @fires BaseConnector#sensor:
+ * @fires BaseConnector#incoming
+ *
+ * @abstract
+ */
 class BaseConnector extends EventEmitter {
   constructor() {
     super();
@@ -9,6 +19,10 @@ class BaseConnector extends EventEmitter {
     this._stepStore = {};
     this.parser = new CommandParser();
     this._commandCallback = {};
+    this._sensorStore = {};
+
+    this.on('incoming', command => this.setSensor(command));
+    this.on('incoming', command => Logger.debug(`RECV ${command.bufferType}:`, command.toString()));
   }
 
   /**
@@ -35,7 +49,6 @@ class BaseConnector extends EventEmitter {
    * @param {DroneCommand} command - Sent command
    * @param {number} packetId - Packet id
    * @returns {Promise} - Resolves when the command has been acknowledged (if needed)
-   * @protected
    * @async
    */
   _setAckCallback(command, packetId) {
@@ -65,6 +78,76 @@ class BaseConnector extends EventEmitter {
         _accept();
       }
     });
+  }
+
+  /**
+   * Get the most recent sensor reading
+   *
+   * @param {string} project - Project name
+   * @param {string} class_ - Class name
+   * @param {string} command - Command name
+   * @returns {DroneCommand|undefined} - {@link DroneCommand} instance or {@link undefined} if no sensor reading could be found
+   * @see {@link https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/}
+   */
+  getSensor(project, class_, command) {
+    const token = [project, class_, command].join('-');
+
+    return this.getSensorFromToken(token);
+  }
+
+  /**
+   * Get the most recent sensor reading using the sensor token
+   *
+   * @param {string} token - Command token
+   * @returns {DroneCommand|undefined} - {@link DroneCommand} instance or {@link undefined} if no sensor reading could be found
+   * @see {@link https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/}
+   * @see {@link DroneCommand.getToken}
+   */
+  getSensorFromToken(token) {
+    let command = this._sensorStore[token];
+
+    if (command) {
+      command = command.copy();
+    }
+
+    return command;
+  }
+
+  setSensor(command) {
+    this._sensorStore[command.getToken()] = command;
+
+    /**
+     * Fires when a new sensor reading has been received
+     *
+     * @event DroneConnection#sensor:
+     * @type {DroneCommand} - The sensor reading
+     * @example
+     * connection.on('sensor:minidrone-UsbAccessoryState-GunState', function(sensor) {
+     *  if (sensor.state.value === sensor.state.enum.READY) {
+     *    console.log('The gun is ready to fire!');
+     *  }
+     * });
+     */
+    this.emit('sensor:' + token, command);
+    this.emit('sensor:*', command);
+  }
+
+  /**
+   * @returns {boolean} If the drone is connected
+   * @abstract
+   */
+  get connected() {
+    return false;
+  }
+
+  /**
+   * Connect to the drone
+   * @returns {Promise} - Resolves when the connection has been established
+   * @async
+   * @abstract
+   */
+  connect() {
+    throw new Error('Abstract class');
   }
 }
 

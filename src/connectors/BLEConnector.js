@@ -164,7 +164,7 @@ class BLEConnector extends BaseConnector {
        * Drone disconnected event
        * Fired when the bluetooth connection has been disconnected
        *
-       * @event DroneCommand#disconnected
+       * @event BaseConnector#disconnected
        */
       noble.on('disconnect', () => this.disconnect());
 
@@ -173,7 +173,7 @@ class BLEConnector extends BaseConnector {
          * Drone connected event
          * You can control the drone once this event has been triggered.
          *
-         * @event DroneCommand#connected
+         * @event BaseConnector#connected
          */
         this.emit('connected');
       }, 200);

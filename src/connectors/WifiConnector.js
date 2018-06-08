@@ -7,14 +7,27 @@ const mdns = require('mdns');
 const { bufferType } = require('../BufferEnums');
 const { promisify } = require('../util/reflection');
 
+/**
+ * Wifi connector for the drone
+ *
+ * Used for connecting to drones using Wifi
+ */
 class WifiConnector extends BaseConnector {
+  /**
+   * Create a Wifi connector
+   * @param {string?} droneFilter - Name of the drone
+   * @param {string?} deviceId - Persistent device id for reconnection
+   */
   constructor(droneFilter = '', deviceId = '') {
     super();
 
     this.droneFilter = droneFilter;
-    this.deviceId = deviceId || Math.random().toString(36); // Should be persistant between connections
+    this.deviceId = deviceId || ('000' + Math.round(Math.random() * 1000).toString()).slice(-4); // Should be persistant between connections
   }
 
+  /**
+   * @inheritDoc
+   */
   connect() {
     if (!this.browser && !this.server && !this.client) {
       Logger.debug('Starting mDNS browser');
@@ -38,6 +51,13 @@ class WifiConnector extends BaseConnector {
     return new Promise(accept => accept());
   }
 
+  /**
+   * @inheritDoc
+   */
+  get connected() {
+    return this.browser && this.server && this.client;
+  }
+
   async _onMdnsServiceDiscovery(service) {
     if (!service.fullname.includes('_arsdk-')) {
       Logger.debug(`Skipping mdns service ${service.fullname}`);
@@ -54,13 +74,64 @@ class WifiConnector extends BaseConnector {
 
     Logger.debug(`Found drone ${service.name}`);
 
-    await this._handshake(service);
+    try {
+      await this._connect(service);
+    } catch (e) {
+      this.disconnect();
+
+      throw e;
+    }
 
     return true;
   }
 
-  async _handshake(service) {
+  async _connect(service) {
     Logger.info(`Doing Wifi handshake with ${service.addresses[0]} [${service.addresses.join(', ')}]`);
+
+    await this._startServer();
+
+    this.ip = service.addresses[0];
+
+    let data = await this._sendHandshake(this.ip, service.port);
+
+    data = data.toString();
+    data = data.replace('\0', ''); // Remove trailing nullbyte
+    data = JSON.parse(data);
+
+    Logger.debug('Got drone response: ', data);
+
+    if (data.status !== 0) {
+      const error = ARDiscoveryError.findForValue(data.status);
+
+      throw new Error(error);
+    }
+
+    this.port = data.c2d_port;
+
+    this.client = dgram.createSocket('udp4');
+
+    this.client.on('error', err => {
+      this.disconnect();
+
+      throw err;
+    });
+
+    Logger.debug(`Stream available at ${this.rtspStreamUri}`);
+
+    /**
+     * Drone connected event
+     * You can control the drone once this event has been triggered.
+     *
+     * @event BaseConnector#connected
+     */
+    this.emit('connected');
+  }
+
+  async _startServer() {
+    if (this.server) {
+      Logger.warn('Found existing running server, closing it');
+      this.server.close();
+    }
 
     this.server = dgram.createSocket('udp4');
 
@@ -76,14 +147,16 @@ class WifiConnector extends BaseConnector {
     this.server.bind(0); // random utp port
 
     await promisify(this.server.once.bind(this.server))('listening');
+  }
 
+  async _sendHandshake(ip, port) {
     const address = this.server.address();
 
     Logger.debug(`Server listening ${address.address}:${address.port}`);
 
     const handshakeClient = new net.Socket();
 
-    handshakeClient.connect(service.port, service.addresses[0], () => {
+    handshakeClient.connect(port, ip, () => {
       const config = {
         'd2c_port': this.server.address().port,
         'controller_type': 'minidrone-js',
@@ -96,38 +169,19 @@ class WifiConnector extends BaseConnector {
       handshakeClient.write(JSON.stringify(config));
     });
 
-    let data = await promisify(handshakeClient.once.bind(handshakeClient))('data');
-
-    data = data.toString();
-    data = data.replace('\0', ''); // Remove trailing nullbyte
-    data = JSON.parse(data);
-
-    Logger.debug('Got drone response: ', data);
-
-    if (data.status !== 0) {
-      const error = ARDiscoveryError.findForValue(data.status);
-
-      throw new Error(error);
-    }
+    const data = await promisify(handshakeClient.once.bind(handshakeClient))('data');
 
     handshakeClient.destroy();
 
-    this.ip = service.addresses[0];
-    this.port = data.c2d_port;
-
-    this.client = dgram.createSocket('udp4');
-
-    this.client.on('error', err => {
-      this.disconnect();
-
-      throw err;
-    });
-
-    Logger.debug(`Stream available at ${this.rtspStreamUri}`);
-
-    this.emit('connected');
+    return data;
   }
 
+  /**
+   * Write raw buffer to the drone
+   * @param {Buffer} buffer
+   * @returns {number} - Resolves with the number of bytes sent
+   * @async
+   */
   write(buffer) {
     return new Promise((accept, reject) => {
       this.client.send(buffer, 0, buffer.length, this.port, this.ip, err => {
@@ -140,8 +194,13 @@ class WifiConnector extends BaseConnector {
     });
   }
 
+  /**
+   * Disconnect from the drone
+   * @emits BaseConnector#disconnected
+   * @returns {void}
+   */
   disconnect() {
-    Logger.info('Disconnected');
+    this.server.close();
 
     delete this.browser;
     delete this.server;
@@ -149,13 +208,16 @@ class WifiConnector extends BaseConnector {
     delete this.port;
     delete this.client;
 
+    Logger.info('Disconnected');
+
     this.emit('disconnected');
   }
 
-  get connected() {
-    return this.server && this.client;
-  }
-
+  /**
+   * Send a command to the drone
+   * @param {DroneCommand} command - Command to send
+   * @returns {Promise} - Resolves when the command has been acknowledged or rejects if it times out
+   */
   sendCommand(command) {
     const commandBuffer = command.toBuffer();
     const buffer = Buffer.concat([new Buffer(7), commandBuffer]);
@@ -215,6 +277,10 @@ class WifiConnector extends BaseConnector {
     }
   }
 
+  /**
+   * Returns an approximation of the rtsp stream uri. Sometimes it's the gateway not the drone itself oddly enough.
+   * @returns {string} - stream uri
+   */
   get rtspStreamUri() {
     return `rtsp://${this.ip}/media/stream2`;
   }
