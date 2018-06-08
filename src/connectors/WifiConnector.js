@@ -5,6 +5,7 @@ const net = require('net');
 const ARDiscoveryError = require('../ARDiscoveryError');
 const mdns = require('mdns');
 const { bufferType } = require('../BufferEnums');
+const { promisify } = require('../util/reflection');
 
 class WifiConnector extends BaseConnector {
   constructor(droneFilter = '', deviceId = '') {
@@ -27,20 +28,25 @@ class WifiConnector extends BaseConnector {
 
       this.browser = mdns.createBrowser(mdns.udp('_arsdk-090b'), { resolverSequence }); // @todo browse all
 
-      this.browser.on('serviceUp', service => this._onMdnsServiceDiscovery(service));
+      return new Promise(accept => {
+        this.browser.on('serviceUp', service => this._onMdnsServiceDiscovery(service).then(c => !c || accept()));
 
-      this.browser.start();
+        this.browser.start();
+      });
     }
+
+    return new Promise(accept => accept());
   }
 
-  _onMdnsServiceDiscovery(service) {
+  async _onMdnsServiceDiscovery(service) {
     if (!service.fullname.includes('_arsdk-')) {
-      return;
+      Logger.debug(`Skipping mdns service ${service.fullname}`);
+      return false;
     }
 
     if (this.droneFilter && service.name !== this.droneFilter) {
       Logger.debug(`Found drone ${service.name} but it didn't match the drone filter`);
-      return;
+      return false;
     }
 
     this.browser.stop();
@@ -48,10 +54,12 @@ class WifiConnector extends BaseConnector {
 
     Logger.debug(`Found drone ${service.name}`);
 
-    this._handshake(service);
+    await this._handshake(service);
+
+    return true;
   }
 
-  _handshake(service) {
+  async _handshake(service) {
     Logger.info(`Doing Wifi handshake with ${service.addresses[0]} [${service.addresses.join(', ')}]`);
 
     this.server = dgram.createSocket('udp4');
@@ -63,63 +71,61 @@ class WifiConnector extends BaseConnector {
       throw err;
     });
 
-    this.server.on('message', (msg, info) => {
-      Logger.debug(`Got data from server ${info.address}:${info.port} (${info.size} bytes)`);
-
-      this._handleIncoming(msg);
-    });
-
-    this.server.on('listening', () => {
-      const address = this.server.address();
-
-      Logger.debug(`Server listening ${address.address}:${address.port}`);
-
-      const handshakeClient = new net.Socket();
-
-      handshakeClient.connect(service.port, service.addresses[0], () => {
-        const config = {
-          'd2c_port': this.server.address().port,
-          'controller_type': 'minidrone-js',
-          'controller_name': 'me.shodan.minidrone-js',
-          // 'device_id': this.deviceId, // @ todo drone returns errors
-        };
-
-        Logger.debug('Negotiating connection:', config);
-
-        handshakeClient.write(JSON.stringify(config));
-      });
-
-      handshakeClient.on('data', data => {
-        data = data.toString();
-        data = data.replace('\0', ''); // Remove trailing nullbyte
-        data = JSON.parse(data);
-
-        Logger.debug('Got drone response: ', data);
-
-        if (data.status !== 0) {
-          const error = ARDiscoveryError.findForValue(data.status);
-
-          throw new Error(error);
-        }
-
-        handshakeClient.destroy();
-
-        this.ip = service.addresses[0];
-        this.port = data.c2d_port;
-
-        this.client = dgram.createSocket('udp4');
-
-        this.client.on('error', err => {
-          this.disconnect();
-
-          throw err;
-        });
-
-        this.emit('connected');
-      });
-    });
+    this.server.on('message', msg => this._handleIncoming(msg));
 
     this.server.bind(0); // random utp port
+
+    await promisify(this.server.once.bind(this.server))('listening');
+
+    const address = this.server.address();
+
+    Logger.debug(`Server listening ${address.address}:${address.port}`);
+
+    const handshakeClient = new net.Socket();
+
+    handshakeClient.connect(service.port, service.addresses[0], () => {
+      const config = {
+        'd2c_port': this.server.address().port,
+        'controller_type': 'minidrone-js',
+        'controller_name': 'me.shodan.minidrone-js',
+        // 'device_id': this.deviceId, // @ todo drone returns errors
+      };
+
+      Logger.debug('Negotiating connection:', config);
+
+      handshakeClient.write(JSON.stringify(config));
+    });
+
+    let data = await promisify(handshakeClient.once.bind(handshakeClient))('data');
+
+    data = data.toString();
+    data = data.replace('\0', ''); // Remove trailing nullbyte
+    data = JSON.parse(data);
+
+    Logger.debug('Got drone response: ', data);
+
+    if (data.status !== 0) {
+      const error = ARDiscoveryError.findForValue(data.status);
+
+      throw new Error(error);
+    }
+
+    handshakeClient.destroy();
+
+    this.ip = service.addresses[0];
+    this.port = data.c2d_port;
+
+    this.client = dgram.createSocket('udp4');
+
+    this.client.on('error', err => {
+      this.disconnect();
+
+      throw err;
+    });
+
+    Logger.debug(`Stream available at ${this.rtspStreamUri}`);
+
+    this.emit('connected');
   }
 
   write(buffer) {
@@ -161,20 +167,9 @@ class WifiConnector extends BaseConnector {
     buffer.writeUInt8(packetId, 2); // sequence number
     buffer.writeUInt32LE(commandBuffer.length + 7, 3); // frame size
 
-    return new Promise(accept => {
-      Logger.debug(`SEND ${command.bufferType}[${packetId}]: `, command.toString());
+    this.write(buffer, command.sendCharacteristicUuid);
 
-      if (command.shouldAck) {
-        if (!this._commandCallback[bufferId]) {
-          this._commandCallback[bufferId] = {};
-        }
-
-        this._commandCallback[bufferId][packetId] = accept;
-      } else {
-        accept();
-      }
-      this.write(buffer, command.sendCharacteristicUuid);
-    });
+    return this._setAckCallback(command, packetId);
   }
 
   _handleIncoming(buffer) {
@@ -187,8 +182,8 @@ class WifiConnector extends BaseConnector {
 
         const callback = (this._commandCallback[bufferId] || {})[packetId];
 
-        if (typeof callback === 'function') {
-          callback();
+        if (typeof callback.accept === 'function') {
+          callback.accept();
         }
 
         break;
@@ -201,12 +196,15 @@ class WifiConnector extends BaseConnector {
         ackBuffer.writeUInt32LE(8, 3); // frame size, always 8 for an ACK
         ackBuffer.writeUInt8(buffer.readUInt8(2), 7);
 
-        Logger.debug(`SEND ACK: buffer ${buffer.readUInt8(1)}, step ${buffer.readUInt8(2)}`);
         this.write(ackBuffer);
       case 'DATA':
       case 'LOW_LATENCY_DATA':
+        const frame = buffer.slice(7);
+
+        this.emit('data', frame);
+
         try {
-          const command = this.parser.parseBuffer(buffer.slice(7));
+          const command = this.parser.parseBuffer(frame);
 
           Logger.debug(command.toString(true));
 
@@ -215,6 +213,10 @@ class WifiConnector extends BaseConnector {
           Logger.error(e);
         }
     }
+  }
+
+  get rtspStreamUri() {
+    return `rtsp://${this.ip}/media/stream2`;
   }
 }
 

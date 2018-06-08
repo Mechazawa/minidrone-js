@@ -29,7 +29,7 @@ class DroneConnection extends EventEmitter {
 
     this.connector.on('disconnect', () => this.emit('disconnect'));
     this.connector.on('connected', () => this.emit('connected'));
-    this.connector.on('data', data => this._handleIncoming(data));
+
     this.connector.on('incoming', command => {
       // @todo move code
 

@@ -10,7 +10,7 @@ function getTypeName(value) {
   return value.name;
 }
 
-function promiseify(func) {
+function promisify(func) {
   return function() {
     return new Promise((accept, reject) => {
       try {
@@ -25,5 +25,5 @@ function promiseify(func) {
 
 module.exports = {
   getTypeName,
-  promiseify,
+  promisify,
 };

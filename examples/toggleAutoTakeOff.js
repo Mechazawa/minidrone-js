@@ -32,5 +32,5 @@ drone.on('connected', async () => {
     Logger.debug(command.toString(true));
   }
 
-  process.exit();
+  // process.exit();
 });
