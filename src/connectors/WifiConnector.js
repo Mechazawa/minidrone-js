@@ -218,7 +218,7 @@ class WifiConnector extends BaseConnector {
    * @param {DroneCommand} command - Command to send
    * @returns {Promise} - Resolves when the command has been acknowledged or rejects if it times out
    */
-  sendCommand(command) {
+  async sendCommand(command) {
     const commandBuffer = command.toBuffer();
     const buffer = Buffer.concat([new Buffer(7), commandBuffer]);
     const bufferId = command.bufferId;
@@ -231,7 +231,15 @@ class WifiConnector extends BaseConnector {
 
     this.write(buffer, command.sendCharacteristicUuid);
 
-    return this._setAckCallback(command, packetId);
+    try {
+      return await this._setAckCallback(command, packetId);
+    } catch (e) {
+      if (e.message.startsWith('Command timed out')) {
+        this.disconnect();
+      }
+
+      throw e;
+    }
   }
 
   _handleIncoming(buffer) {
@@ -282,7 +290,7 @@ class WifiConnector extends BaseConnector {
    * @returns {string} - stream uri
    */
   get rtspStreamUri() {
-    return `rtsp://${this.ip}/media/stream2`;
+    return 'rtsp://192.168.99.1/media/stream2';
   }
 }
 

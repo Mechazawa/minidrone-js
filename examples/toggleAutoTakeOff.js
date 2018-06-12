@@ -1,12 +1,12 @@
-const { DroneConnection, CommandParser, WifiConnector, BLEConnector } = require('../src');
+const { CommandParser, WifiConnector } = require('minidrone-js');
 const Logger = require('winston');
 
 Logger.level = 'debug';
 
 const parser = new CommandParser();
-const connector = new WifiConnector();
-const drone = new DroneConnection(connector);
-connector.connect();
+const drone = new WifiConnector();
+
+drone.connect();
 
 const autoTakeOffOn = parser.getCommand('minidrone', 'Piloting', 'AutoTakeOffMode', { state: 1 });
 const autoTakeOffOff = parser.getCommand('minidrone', 'Piloting', 'AutoTakeOffMode', { state: 0 });
@@ -18,13 +18,14 @@ function sleep(ms) {
 
 drone.on('connected', async () => {
   await sleep(200);
-  await drone.runCommand(allState);
 
-  await drone.runCommand(autoTakeOffOn);
+  await drone.sendCommand(allState);
+
+  await drone.sendCommand(autoTakeOffOn);
 
   await sleep(2000);
 
-  await drone.runCommand(autoTakeOffOff);
+  await drone.sendCommand(autoTakeOffOff);
 
   Logger.debug('values: ');
 
@@ -32,5 +33,10 @@ drone.on('connected', async () => {
     Logger.debug(command.toString(true));
   }
 
+  while (true) {
+    await sleep(2000);
+
+    drone.sendCommand(allState);
+  }
   // process.exit();
 });

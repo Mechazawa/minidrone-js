@@ -17,12 +17,20 @@ class BaseConnector extends EventEmitter {
     super();
 
     this._stepStore = {};
-    this.parser = new CommandParser();
+    this._parser = new CommandParser();
     this._commandCallback = {};
     this._sensorStore = {};
 
     this.on('incoming', command => this.setSensor(command));
     this.on('incoming', command => Logger.debug(`RECV ${command.bufferType}:`, command.toString()));
+  }
+
+  /**
+   * Accessor for getting the {@link CommandParser} instance
+   * @returns {CommandParser} - {@link CommandParser} instance
+   */
+  get parser() {
+    return this._parser;
   }
 
   /**
@@ -61,7 +69,7 @@ class BaseConnector extends EventEmitter {
         }
 
         // For if the command times out
-        const timeout = setTimeout(reject, 10 * 1000, new Error('Command timed out after 10 seconds'));
+        const timeout = setTimeout(reject, 5 * 1000, new Error('Command timed out after 5 seconds'));
 
         const accept = () => {
           clearTimeout(timeout);
@@ -107,14 +115,16 @@ class BaseConnector extends EventEmitter {
     let command = this._sensorStore[token];
 
     if (command) {
-      command = command.copy();
+      return command.clone();
     }
-
-    return command;
   }
 
   setSensor(command) {
-    this._sensorStore[command.getToken()] = command;
+    const token = command.getToken();
+
+    this._sensorStore[token] = command;
+
+    Logger.debug('EMIT: sensor:' + token);
 
     /**
      * Fires when a new sensor reading has been received
