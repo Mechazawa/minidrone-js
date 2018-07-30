@@ -212,9 +212,11 @@ async-each@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/async-each/-/async-each-1.0.1.tgz#19d386a1d9edc6e7c1c85d388aedbcc56d33602d"
 
-async@~1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/async/-/async-1.0.0.tgz#f8fc04ca3a13784ade9e1641af98578cfbd647a9"
+async@^2.6.0:
+  version "2.6.1"
+  resolved "https://registry.yarnpkg.com/async/-/async-2.6.1.tgz#b245a23ca71930044ec53fa46aa00a3e87c6a610"
+  dependencies:
+    lodash "^4.17.10"
 
 asynckit@^0.4.0:
   version "0.4.0"
@@ -892,19 +894,47 @@ code-point-at@^1.0.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/code-point-at/-/code-point-at-1.1.0.tgz#0d070b4d043a5bea33a2f1a40e2edb3d9a4ccf77"
 
+color-convert@^0.5.0:
+  version "0.5.3"
+  resolved "https://registry.yarnpkg.com/color-convert/-/color-convert-0.5.3.tgz#bdb6c69ce660fadffe0b0007cc447e1b9f7282bd"
+
 color-convert@^1.9.0:
   version "1.9.1"
   resolved "https://registry.yarnpkg.com/color-convert/-/color-convert-1.9.1.tgz#c1261107aeb2f294ebffec9ed9ecad529a6097ed"
   dependencies:
     color-name "^1.1.1"
 
-color-name@^1.1.1:
+color-name@^1.0.0, color-name@^1.1.1:
   version "1.1.3"
   resolved "https://registry.yarnpkg.com/color-name/-/color-name-1.1.3.tgz#a7d0558bd89c42f795dd42328f740831ca53bc25"
 
-colors@1.0.x:
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/colors/-/colors-1.0.3.tgz#0433f44d809680fdeb60ed260f1b0c262e82a40b"
+color-string@^0.3.0:
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/color-string/-/color-string-0.3.0.tgz#27d46fb67025c5c2fa25993bfbf579e47841b991"
+  dependencies:
+    color-name "^1.0.0"
+
+color@0.8.x:
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/color/-/color-0.8.0.tgz#890c07c3fd4e649537638911cf691e5458b6fca5"
+  dependencies:
+    color-convert "^0.5.0"
+    color-string "^0.3.0"
+
+colornames@0.0.2:
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/colornames/-/colornames-0.0.2.tgz#d811fd6c84f59029499a8ac4436202935b92be31"
+
+colors@^1.2.1:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/colors/-/colors-1.3.0.tgz#5f20c9fef6945cb1134260aab33bfbdc8295e04e"
+
+colorspace@1.0.x:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/colorspace/-/colorspace-1.0.1.tgz#c99c796ed31128b9876a52e1ee5ee03a4a719749"
+  dependencies:
+    color "0.8.x"
+    text-hex "0.0.x"
 
 combined-stream@^1.0.5, combined-stream@~1.0.5:
   version "1.0.5"
@@ -1024,10 +1054,6 @@ currently-unhandled@^0.4.1:
   dependencies:
     array-find-index "^1.0.1"
 
-cycle@1.0.x:
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/cycle/-/cycle-1.0.3.tgz#21e80b2be8580f98b468f379430662b046c34ad2"
-
 dashdash@^1.12.0:
   version "1.14.1"
   resolved "https://registry.yarnpkg.com/dashdash/-/dashdash-1.14.1.tgz#853cfa0f7cbe2fed5de20326b8dd581035f6e2f0"
@@ -1119,6 +1145,14 @@ detect-libc@^1.0.2:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/detect-libc/-/detect-libc-1.0.3.tgz#fa137c4bd698edf55cd5cd02ac559f91a4c4ba9b"
 
+diagnostics@^1.0.1:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/diagnostics/-/diagnostics-1.1.0.tgz#e1090900b49523e8527be20f081275205f2ae36a"
+  dependencies:
+    colorspace "1.0.x"
+    enabled "1.0.x"
+    kuler "0.0.x"
+
 doctrine@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/doctrine/-/doctrine-2.1.0.tgz#5cd01fc101621b42c4cd7f5d1a66243716d3f39d"
@@ -1147,6 +1181,16 @@ empower-core@^0.6.1:
   dependencies:
     call-signature "0.0.2"
     core-js "^2.0.0"
+
+enabled@1.0.x:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/enabled/-/enabled-1.0.2.tgz#965f6513d2c2d1c5f4652b64a2e3396467fc2f93"
+  dependencies:
+    env-variable "0.0.x"
+
+env-variable@0.0.x:
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/env-variable/-/env-variable-0.0.4.tgz#0d6280cf507d84242befe35a512b5ae4be77c54e"
 
 equal-length@^1.0.0:
   version "1.0.1"
@@ -1344,10 +1388,6 @@ extsprintf@^1.2.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/extsprintf/-/extsprintf-1.4.0.tgz#e2689f8f356fad62cca65a3a91c5df5f9551692f"
 
-eyes@0.1.x:
-  version "0.1.8"
-  resolved "https://registry.yarnpkg.com/eyes/-/eyes-0.1.8.tgz#62cf120234c683785d902348a800ef3e0cc20bc0"
-
 fast-deep-equal@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/fast-deep-equal/-/fast-deep-equal-1.0.0.tgz#96256a3bc975595eb36d82e9929d060d893439ff"
@@ -1367,6 +1407,14 @@ fast-json-stable-stringify@^2.0.0:
 fast-levenshtein@~2.0.4:
   version "2.0.6"
   resolved "https://registry.yarnpkg.com/fast-levenshtein/-/fast-levenshtein-2.0.6.tgz#3d8a5c66883a16a30ca8643e851f19baa7797917"
+
+fast-safe-stringify@^2.0.4:
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/fast-safe-stringify/-/fast-safe-stringify-2.0.4.tgz#4fe828718aa61dbcf9119c3c24e79cc4dea973b2"
+
+fecha@^2.3.3:
+  version "2.3.3"
+  resolved "https://registry.yarnpkg.com/fecha/-/fecha-2.3.3.tgz#948e74157df1a32fd1b12c3a3c3cdcb6ec9d96cd"
 
 figures@^2.0.0:
   version "2.0.0"
@@ -2024,7 +2072,7 @@ isobject@^2.0.0:
   dependencies:
     isarray "1.0.0"
 
-isstream@0.1.x, isstream@~0.1.2:
+isstream@~0.1.2:
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/isstream/-/isstream-0.1.2.tgz#47e63f7af55afa6f92e1500e690eb8b8529c099a"
 
@@ -2150,6 +2198,12 @@ klaw@~2.0.0:
   dependencies:
     graceful-fs "^4.1.9"
 
+kuler@0.0.x:
+  version "0.0.0"
+  resolved "https://registry.yarnpkg.com/kuler/-/kuler-0.0.0.tgz#b66bb46b934e550f59d818848e0abba4f7f5553c"
+  dependencies:
+    colornames "0.0.2"
+
 last-line-stream@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/last-line-stream/-/last-line-stream-1.0.0.tgz#d1b64d69f86ff24af2d04883a2ceee14520a5600"
@@ -2236,6 +2290,10 @@ lodash.merge@^4.6.0:
   version "4.6.1"
   resolved "https://registry.yarnpkg.com/lodash.merge/-/lodash.merge-4.6.1.tgz#adc25d9cb99b9391c59624f379fbba60d7111d54"
 
+lodash@^4.17.10:
+  version "4.17.10"
+  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.10.tgz#1b7793cf7259ea38fb3661d4d38b3260af8ae4e7"
+
 lodash@^4.17.4, lodash@^4.3.0:
   version "4.17.5"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.5.tgz#99a92d65c0272debe8c96b6057bc8fbfa3bed511"
@@ -2243,6 +2301,16 @@ lodash@^4.17.4, lodash@^4.3.0:
 lodash@^4.17.5:
   version "4.17.10"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.10.tgz#1b7793cf7259ea38fb3661d4d38b3260af8ae4e7"
+
+logform@^1.9.0:
+  version "1.9.0"
+  resolved "https://registry.yarnpkg.com/logform/-/logform-1.9.0.tgz#7e02f7d6b7f70dcc8ae56fcd2d060f9547afbac2"
+  dependencies:
+    colors "^1.2.1"
+    fast-safe-stringify "^2.0.4"
+    fecha "^2.3.3"
+    ms "^2.1.1"
+    triple-beam "^1.2.0"
 
 loose-envify@^1.0.0:
   version "1.3.1"
@@ -2383,7 +2451,7 @@ ms@2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.0.0.tgz#5608aeadfc00be6c2901df5f9861788de0d597c8"
 
-ms@^2.0.0:
+ms@^2.0.0, ms@^2.1.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.1.tgz#30a5864eb3ebb0a66f2ebe6d727af06a09d86e0a"
 
@@ -2534,6 +2602,10 @@ once@^1.3.0, once@^1.3.3:
   resolved "https://registry.yarnpkg.com/once/-/once-1.4.0.tgz#583b1aa775961d4b113ac17d9c50baef9dd76bd1"
   dependencies:
     wrappy "1"
+
+one-time@0.0.4:
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/one-time/-/one-time-0.0.4.tgz#f8cdf77884826fe4dff93e3a9cc37b1e4480742e"
 
 onetime@^2.0.0:
   version "2.0.1"
@@ -2857,6 +2929,18 @@ readable-stream@^2.0.2, readable-stream@^2.0.6, readable-stream@^2.1.4, readable
     process-nextick-args "~2.0.0"
     safe-buffer "~5.1.1"
     string_decoder "~1.0.3"
+    util-deprecate "~1.0.1"
+
+readable-stream@^2.3.6:
+  version "2.3.6"
+  resolved "https://registry.yarnpkg.com/readable-stream/-/readable-stream-2.3.6.tgz#b11c27d88b8ff1fbe070643cf94b0c79ae1b0aaf"
+  dependencies:
+    core-util-is "~1.0.0"
+    inherits "~2.0.3"
+    isarray "~1.0.0"
+    process-nextick-args "~2.0.0"
+    safe-buffer "~5.1.1"
+    string_decoder "~1.1.1"
     util-deprecate "~1.0.1"
 
 readdirp@^2.0.0:
@@ -3241,6 +3325,12 @@ string_decoder@~1.0.3:
   dependencies:
     safe-buffer "~5.1.0"
 
+string_decoder@~1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/string_decoder/-/string_decoder-1.1.1.tgz#9cf1611ba62685d7030ae9e4ba34149c3af03fc8"
+  dependencies:
+    safe-buffer "~5.1.0"
+
 stringstream@~0.0.4, stringstream@~0.0.5:
   version "0.0.5"
   resolved "https://registry.yarnpkg.com/stringstream/-/stringstream-0.0.5.tgz#4e484cd4de5a0bbbee18e46307710a8a81621878"
@@ -3371,7 +3461,11 @@ term-size@^1.2.0:
   dependencies:
     execa "^0.7.0"
 
-text-table@^0.2.0:
+text-hex@0.0.x:
+  version "0.0.0"
+  resolved "https://registry.yarnpkg.com/text-hex/-/text-hex-0.0.0.tgz#578fbc85a6a92636e42dd17b41d0218cce9eb2b3"
+
+text-table@^0.2.0, text-table@~0.2.0:
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/text-table/-/text-table-0.2.0.tgz#7f5ee823ae805207c00af2df4a84ec3fcfa570b4"
 
@@ -3421,6 +3515,10 @@ trim-off-newlines@^1.0.1:
 trim-right@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/trim-right/-/trim-right-1.0.1.tgz#cb2e1203067e0c8de1f614094b9fe45704ea6003"
+
+triple-beam@^1.2.0, triple-beam@^1.3.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/triple-beam/-/triple-beam-1.3.0.tgz#a595214c7298db8339eeeee083e4d10bd8cb8dd9"
 
 tunnel-agent@^0.6.0:
   version "0.6.0"
@@ -3556,16 +3654,26 @@ widest-line@^2.0.0:
   dependencies:
     string-width "^2.1.1"
 
-winston@^2.4.0:
-  version "2.4.0"
-  resolved "https://registry.yarnpkg.com/winston/-/winston-2.4.0.tgz#808050b93d52661ed9fb6c26b3f0c826708b0aee"
+winston-transport@^4.2.0:
+  version "4.2.0"
+  resolved "https://registry.yarnpkg.com/winston-transport/-/winston-transport-4.2.0.tgz#a20be89edf2ea2ca39ba25f3e50344d73e6520e5"
   dependencies:
-    async "~1.0.0"
-    colors "1.0.x"
-    cycle "1.0.x"
-    eyes "0.1.x"
-    isstream "0.1.x"
+    readable-stream "^2.3.6"
+    triple-beam "^1.2.0"
+
+winston@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/winston/-/winston-3.0.0.tgz#1f0b24a96586798bcf0cd149fb07ed47cb01a1b2"
+  dependencies:
+    async "^2.6.0"
+    diagnostics "^1.0.1"
+    is-stream "^1.1.0"
+    logform "^1.9.0"
+    one-time "0.0.4"
+    readable-stream "^2.3.6"
     stack-trace "0.0.x"
+    triple-beam "^1.3.0"
+    winston-transport "^4.2.0"
 
 wordwrap@~1.0.0:
   version "1.0.0"
