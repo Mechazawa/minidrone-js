@@ -97,6 +97,10 @@ class DroneCommandArgument {
     this._value = this._parseValue(value);
   }
 
+  [Symbol.toPrimitive]() {
+    return this.value;
+  }
+
   /**
    * If it has the enum property set
    * @returns {boolean} - has enum
