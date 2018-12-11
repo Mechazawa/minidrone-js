@@ -15,12 +15,12 @@
     "noble": "git://github.com/jacobrosenthal/noble.git#highsierra",
     "node-gyp": "^3.6.2",
     "resolve": "^1.6.0",
-    "winston": "^2.4.0",
+    "winston": "^3.0.0",
     "xml2js": "^0.4.19"
   },
   "devDependencies": {
     "ava": "0.25.0",
-    "eslint": "4.19.1",
+    "eslint": "5.10.0",
     "jsdoc": "3.5.5",
     "mdns": "^2.4.0",
     "minami-compat": "1.2.4"
