@@ -9,7 +9,9 @@
   "dependencies": {
     "arsdk-xml": "1.0.0",
     "case": "^1.5.4",
+    "dgram": "^1.0.1",
     "events": "^3.0.0",
+    "net": "^1.0.2",
     "noble": "git://github.com/jacobrosenthal/noble.git#highsierra",
     "node-gyp": "^3.6.2",
     "resolve": "^1.6.0",
@@ -20,6 +22,7 @@
     "ava": "0.25.0",
     "eslint": "5.10.0",
     "jsdoc": "3.5.5",
+    "mdns": "^2.4.0",
     "minami-compat": "1.2.4"
   },
   "scripts": {

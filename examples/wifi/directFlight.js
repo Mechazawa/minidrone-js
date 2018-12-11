@@ -1,52 +1,41 @@
 const dualShock = require('dualshock-controller');
-const {DroneConnection, CommandParser} = require('minidrone-js');
+const { WifiConnector, CommandParser } = require('minidrone-js');
 
-const controller = dualShock({config: 'dualShock4-alternate-driver'});
+const controller = dualShock({ config: 'dualShock4-alternate-driver' });
 const parser = new CommandParser();
-const drone = new DroneConnection();
+const drone = new WifiConnector();
 const takeoff = parser.getCommand('minidrone', 'Piloting', 'TakeOff');
 const landing = parser.getCommand('minidrone', 'Piloting', 'Landing');
 const flatTrim = parser.getCommand('minidrone', 'Piloting', 'FlatTrim');
 const takePicture = parser.getCommand('minidrone', 'MediaRecord', 'PictureV2');
-const fireGun = parser.getCommand('minidrone', 'UsbAccessory', 'GunControl', {id: 0, action: 'FIRE'});
-const clawOpen = parser.getCommand('minidrone', 'UsbAccessory', 'ClawControl', {id: 0, action: 'OPEN'});
-const clawClose = parser.getCommand('minidrone', 'UsbAccessory', 'ClawControl', {id: 0, action: 'CLOSE'});
+const fireGun = parser.getCommand('minidrone', 'UsbAccessory', 'GunControl', { id: 0, action: 'FIRE' });
+const clawOpen = parser.getCommand('minidrone', 'UsbAccessory', 'ClawControl', { id: 0, action: 'OPEN' });
+const clawClose = parser.getCommand('minidrone', 'UsbAccessory', 'ClawControl', { id: 0, action: 'CLOSE' });
 const allState = parser.getCommand('common', 'Common', 'AllStates');
-const autoTakeOff = parser.getCommand('minidrone', 'Piloting', 'AutoTakeOffMode', {state: 1});
+const autoTakeOff = parser.getCommand('minidrone', 'Piloting', 'AutoTakeOffMode', { state: 1 });
 
-
-function paramsChanged(a, b) {
-  for (const key of Object.keys(a)) {
-    if (b[key] !== a[key]) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-let oldParams = {};
+let startTime;
 let flightParams = {
   roll: 0, pitch: 0, yaw: 0, gaz: 0, flag: true,
 };
 
 function setFlightParams(data) {
-  oldParams = flightParams;
   flightParams = Object.assign({}, flightParams, data);
 }
 
-let startTime;
+
 function writeFlightParams() {
-  if(typeof startTime === 'undefined') {
+  if (typeof startTime === 'undefined') {
     startTime = Date.now();
   }
 
   const params = Object.assign({}, flightParams, {
-    timestamp: Date.now() - startTime
+    timestamp: Date.now() - startTime,
   });
 
   const command = parser.getCommand('minidrone', 'Piloting', 'PCMD', params);
-  drone.runCommand(command);
+
+  drone.sendCommand(command);
 }
 
 function joyToFlightParam(value) {
@@ -75,13 +64,21 @@ drone.on('connected', () => {
   });
 
   controller.on('circle:press', () => {
-    console.log(Object.values(drone._sensorStore).map(x=>x.toString()).join('\n'));
-    drone.runCommand(allState);
+    console.log(Object.values(drone._sensorStore).map(x => x.toString()).join('\n'));
+    drone.sendCommand(allState);
   });
-  controller.on('x:press', () => drone.runCommand(takeoff));
-  controller.on('square:press', () => drone.runCommand(landing));
-  controller.on('triangle:press', () => drone.runCommand(autoTakeOff));
+  controller.on('x:press', () => drone.sendCommand(takeoff));
+  controller.on('square:press', () => drone.sendCommand(landing));
+  controller.on('triangle:press', () => drone.sendCommand(autoTakeOff));
 
-  controller.on('right:move', data => setFlightParams({yaw: joyToFlightParam(data.x), gaz: -joyToFlightParam(data.y)}));
-  controller.on('left:move', data => setFlightParams({roll: joyToFlightParam(data.x), pitch: -joyToFlightParam(data.y)}));
+  controller.on('right:move', data => setFlightParams({
+    yaw: joyToFlightParam(data.x),
+    gaz: -joyToFlightParam(data.y),
+  }));
+  controller.on('left:move', data => setFlightParams({
+    roll: joyToFlightParam(data.x),
+    pitch: -joyToFlightParam(data.y),
+  }));
 });
+
+drone.connect();

@@ -47,7 +47,7 @@ const Enum = require('./util/Enum');
  *
  * @see https://github.com/Parrot-Developers/libARDiscovery/blob/master/Includes/libARDiscovery/ARDISCOVERY_Error.h
  */
-const ARDiscoveryError = module.exports = new Enum({
+const ARDiscoveryError = new Enum({
   // Do not change these values, they are sent by the device in the Json of connection.
   OK: 0,
   ERROR: -1,
@@ -100,3 +100,5 @@ const ARDiscoveryError = module.exports = new Enum({
   ERROR_JSON_PARSSING: -5999,
   ERROR_JSON_BUFFER_SIZE: -5998,
 });
+
+module.exports = ARDiscoveryError;
