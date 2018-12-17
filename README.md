@@ -22,16 +22,8 @@ and sending commands based on the [xml specification].
 
 ## Installation
 
-Using yarn
-
 ```bash
-yarn add minidrone-js
-```
-
-or using npm
-
-```bash
-npm install minidrone-js
+npm install minidrone-js --save
 ```
 
 ## Example
