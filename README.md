@@ -50,21 +50,25 @@ function sleep(ms) {
   return new Promise(a => setTimeout(a, ms));
 }
 
-drone.on('connected', async () => {
+async main() {
+  await new Promise(resolve => drone.once('connected', resolve));
+
   // Makes the code a bit clearer
   const runCommand = x => drone.runCommand(x);
 
   await runCommand(takeoff);
-  
+
   await sleep(2000);
   await runCommand(backFlip);
-  
+
   await sleep(2000);
   await runCommand(landing);
 
   await sleep(5000);
   process.exit();
-});
+}
+
+main();
 ```
 
 ## Troubleshooting
