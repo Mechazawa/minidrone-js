@@ -50,7 +50,7 @@ function sleep(ms) {
   return new Promise(a => setTimeout(a, ms));
 }
 
-void async function main() {
+void async function() {
   await new Promise(resolve => drone.once('connected', resolve));
 
   // Makes the code a bit clearer
