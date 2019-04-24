@@ -11,7 +11,7 @@
     "case": "^1.5.4",
     "events": "^3.0.0",
     "noble": "git://github.com/jacobrosenthal/noble.git#highsierra",
-    "node-gyp": "^3.6.2",
+    "node-gyp": "^4.0.0",
     "resolve": "^1.6.0",
     "winston": "^3.0.0",
     "xml2js": "^0.4.19"
