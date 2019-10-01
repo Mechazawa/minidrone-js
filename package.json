@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "ava": "2.3.0",
-    "eslint": "6.3.0",
+    "eslint": "6.5.1",
     "jsdoc": "3.6.3",
     "minami-compat": "1.2.4"
   },
