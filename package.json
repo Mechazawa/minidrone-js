@@ -19,7 +19,7 @@
   "devDependencies": {
     "ava": "2.4.0",
     "eslint": "7.6.0",
-    "jsdoc": "3.6.5",
+    "jsdoc": "3.6.6",
     "minami-compat": "1.2.4"
   },
   "scripts": {
