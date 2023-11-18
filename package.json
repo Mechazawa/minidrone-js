@@ -7,19 +7,19 @@
   "author": "Bas 'Mechazawa' <mega@ioexception.at>",
   "license": "MIT",
   "dependencies": {
+    "@abandonware/noble": "^1.9.2-23",
     "arsdk-xml": "1.0.0",
     "case": "^1.5.4",
     "events": "^3.0.0",
-    "noble": "git://github.com/jacobrosenthal/noble.git#highsierra",
     "node-gyp": "^10.0.0",
     "resolve": "^1.6.0",
     "winston": "^3.0.0",
-    "xml2js": "^0.5.0"
+    "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "ava": "5.3.1",
-    "eslint": "7.30.0",
-    "jsdoc": "3.6.7",
+    "eslint": "^8.54.0",
+    "jsdoc": "^4.0.2",
     "minami-compat": "1.2.4"
   },
   "scripts": {
