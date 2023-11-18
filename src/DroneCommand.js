@@ -218,9 +218,7 @@ class DroneCommand {
    */
   toBuffer() {
     const bufferLength = 6 + this.arguments.reduce((acc, val) => val.getValueSize() + acc, 0);
-    const buffer = new Buffer(bufferLength);
-
-    buffer.fill(0);
+    const buffer = Buffer.alloc(bufferLength, 0);
 
     buffer.writeUInt16LE(this.bufferFlag, 0);
 

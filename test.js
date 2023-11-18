@@ -20,7 +20,7 @@ const testData = [
 
 let command;
 for (const row of testData) {
-  const buffer = new Buffer(row.splice(2)); // Remove device id and message counter
+  const buffer = Buffer.from(row.splice(2)); // Remove device id and message counter
   command = parser.parseBuffer(buffer);
 
   console.log(command.toString(true));

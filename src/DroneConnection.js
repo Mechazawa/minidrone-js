@@ -442,9 +442,9 @@ class DroneConnection extends EventEmitter {
     Logger.debug('ACK: packet id ' + packetId);
 
     const characteristic = characteristicSendUuids.ACK_COMMAND;
-    const buffer = new Buffer(3);
+    const buffer = Buffer.alloc(3);
 
-    buffer.writeUIntLE(characteristic, 0, 1);
+    buffer.writeUIntLE(Number.parseInt('0x' + characteristic), 0, 1);
     buffer.writeUIntLE(this._getStep(characteristic), 1, 1);
     buffer.writeUIntLE(packetId, 2, 1);
 
