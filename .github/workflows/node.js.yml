@@ -36,6 +36,7 @@ jobs:
       run: npm ci
     - name: Lint
       run: npx eslint src
+
     - name: Generate Documentation
       if: matrix.node-version == 18
       run: npm run docs
