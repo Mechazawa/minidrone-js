@@ -22,4 +22,9 @@ jobs:
       run: npx eslint src
     - name: Generate Documentation
       if: matrix.node-version == 18
-      run: npm docs
+      run: npm build docs
+    - name: Archive Documentation
+      uses: actions/upload-artifact@v3
+      with:
+        name: code-coverage-report
+        path: docs
