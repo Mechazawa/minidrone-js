@@ -72,7 +72,7 @@ class DroneConnection extends EventEmitter {
     while (state === 'poweredOn' && !this._peripheral) {
       const result = await this.noble.startScanningAsync();
 
-      if (result) {
+      if (typeof result === 'object') {
           this._onPeripheralDiscovery(result);
       }
     }
