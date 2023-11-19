@@ -47,7 +47,7 @@ class DroneConnection extends EventEmitter {
 
     this.droneFilter = droneFilter;
 
-    this.noble = require('noble');
+    this.noble = require('@abandonware/noble');
     this.parser = new CommandParser();
 
     if (warmup) {

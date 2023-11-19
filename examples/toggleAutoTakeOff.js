@@ -1,4 +1,4 @@
-const { DroneConnection, CommandParser } = require('../src');
+const { DroneConnection, CommandParser } = require('minidrone-js');
 const Logger = require('winston');
 
 Logger.level = 'debug';
