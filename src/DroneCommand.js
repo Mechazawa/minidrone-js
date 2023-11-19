@@ -1,6 +1,6 @@
 const DroneCommandArgument = require('./DroneCommandArgument');
 const Enum = require('./util/Enum');
-const { characteristicSendUuids } = require('./CharacteristicEnums');
+const { sendUuids, serviceUuids} = require('./CharacteristicEnums');
 
 /**
  * Buffer types
@@ -177,7 +177,7 @@ class DroneCommand {
   get sendCharacteristicUuid() {
     const t = bufferCharTranslationMap[this.bufferType] || 'SEND_WITH_ACK';
 
-    return 'fa' + characteristicSendUuids[t];
+    return serviceUuids.ARCOMMAND_SENDING_SERVICE + sendUuids[t];
   }
 
   /**

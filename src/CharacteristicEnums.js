@@ -16,7 +16,7 @@ const Enum = require('./util/Enum');
  *
  * @type {Enum}
  */
-const characteristicSendUuids = new Enum({
+const sendUuids = new Enum({
   SEND_NO_ACK: '0a', // not-ack commands (PCMD only)
   SEND_WITH_ACK: '0b', // ack commands (all piloting commands)
   SEND_HIGH_PRIORITY: '0c', // emergency commands
@@ -33,14 +33,39 @@ const characteristicSendUuids = new Enum({
  *
  * @type {Enum}
  */
-const characteristicReceiveUuids = new Enum({
+const receiveUuids = new Enum({
   ACK_DRONE_DATA: '0e', // drone data that needs an ack (needs to be ack on 1e)
   NO_ACK_DRONE_DATA: '0f', // data from drone (including battery and others), no ack
   ACK_COMMAND_SENT: '1b', // ack 0b channel, SEND_WITH_ACK
   ACK_HIGH_PRIORITY: '1c', // ack 0c channel, SEND_HIGH_PRIORITY
 });
 
+/**
+ * @see http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
+ */
+const serviceUuids = new Enum({
+  ARCOMMAND_SENDING_SERVICE: 'fa',
+  ARCOMMAND_RECEIVING_SERVICE: 'fb',
+  PERFORMANCE_COUNTER_SERVICE: 'fc',
+  NORMAL_BLE_FTP_SERVICE: 'fd21',
+  UPDATE_BLE_FTP: 'fd51',
+  UPDATE_RFCOMM_SERVICE: 'fe00',
+  DeviceInfo: '1800',
+  unknown: '1801',
+});
+
+/**
+ * @see http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
+ */
+const handshakeUuids = [
+  'fb0f', 'fb0e', 'fb1b', 'fb1c',
+  'fd22', 'fd23', 'fd24', 'fd52',
+  'fd53', 'fd54',
+];
+
 module.exports = {
-  characteristicSendUuids,
-  characteristicReceiveUuids,
+  sendUuids,
+  receiveUuids,
+  serviceUuids,
+  handshakeUuids,
 };

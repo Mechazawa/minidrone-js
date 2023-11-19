@@ -1,8 +1,7 @@
 const EventEmitter = require('events');
 const Logger = require('winston');
-const Enum = require('./util/Enum');
 const CommandParser = require('./CommandParser');
-const { characteristicSendUuids, characteristicReceiveUuids } = require('./CharacteristicEnums');
+const { sendUuids, receiveUuids, serviceUuids, handshakeUuids} = require('./CharacteristicEnums');
 
 const MANUFACTURER_SERIALS = [
   '4300cf1900090100',
@@ -19,27 +18,6 @@ const DRONE_PREFIXES = [
   'Blaze_',
   'NewZ_',
 ];
-
-// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
-const handshakeUuids = [
-  'fb0f', 'fb0e', 'fb1b', 'fb1c',
-  'fd22', 'fd23', 'fd24', 'fd52',
-  'fd53', 'fd54',
-];
-
-// the following UUID segments come from the Mambo and from the documenation at
-// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
-// the 3rd and 4th bytes are used to identify the service
-const serviceUuids = new Enum({
-  'fa': 'ARCOMMAND_SENDING_SERVICE',
-  'fb': 'ARCOMMAND_RECEIVING_SERVICE',
-  'fc': 'PERFORMANCE_COUNTER_SERVICE',
-  'fd21': 'NORMAL_BLE_FTP_SERVICE',
-  'fd51': 'UPDATE_BLE_FTP',
-  'fe00': 'UPDATE_RFCOMM_SERVICE',
-  '1800': 'Device Info',
-  '1801': 'unknown',
-});
 
 /**
  * Drone connection class
@@ -177,8 +155,8 @@ class DroneConnection extends EventEmitter {
       }
 
       Logger.debug('Adding listeners (fb uuid prefix)');
-      for (const uuid of characteristicReceiveUuids.values()) {
-        const target = this.getCharacteristic('fb' + uuid);
+      for (const uuid of receiveUuids.values()) {
+        const target = this.getCharacteristic(serviceUuids.ARCOMMAND_RECEIVING_SERVICE + uuid);
 
         target.subscribe();
         target.on('data', data => this._handleIncoming(uuid, data));
@@ -281,9 +259,10 @@ class DroneConnection extends EventEmitter {
    * @param {string} channelUuid - The channel uuid
    * @param {Buffer} buffer - The packet data
    * @private
+   * @returns {void}
    */
   _handleIncoming(channelUuid, buffer) {
-    const channel = characteristicReceiveUuids.findForValue(channelUuid);
+    const channel = receiveUuids.findForValue(channelUuid);
     let callback;
 
     switch (channel) {
@@ -325,6 +304,7 @@ class DroneConnection extends EventEmitter {
    * @param {boolean} ack - If an acknowledgement for receiving the data should be sent
    * @private
    * @fires DroneConnection#sensor:
+   * @returns {void}
    */
   _updateSensors(buffer, ack = false) {
     if (buffer[2] === 0) {
@@ -436,19 +416,20 @@ class DroneConnection extends EventEmitter {
 
   /**
    * Acknowledge a packet
-   * @param {number} packetId - Id of the packet to ack
+   * @param {number} packetId - ID of the packet to ack
+   * @returns {void}
    */
   ack(packetId) {
     Logger.debug('ACK: packet id ' + packetId);
 
-    const characteristic = characteristicSendUuids.ACK_COMMAND;
+    const characteristic = sendUuids.ACK_COMMAND;
     const buffer = Buffer.alloc(3);
 
     buffer.writeUIntLE(Number.parseInt('0x' + characteristic), 0, 1);
     buffer.writeUIntLE(this._getStep(characteristic), 1, 1);
     buffer.writeUIntLE(packetId, 2, 1);
 
-    this.getCharacteristic('fa' + characteristic).write(buffer, true);
+    this.getCharacteristic(serviceUuids.ARCOMMAND_SENDING_SERVICE + characteristic).write(buffer, true);
   }
 }
 
