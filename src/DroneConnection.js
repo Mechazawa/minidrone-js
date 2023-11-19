@@ -4,9 +4,9 @@ const CommandParser = require('./CommandParser');
 const { sendUuids, receiveUuids, serviceUuids, handshakeUuids} = require('./CharacteristicEnums');
 
 const MANUFACTURER_SERIALS = [
-  '4300cf1900090100',
-  '4300cf1909090100',
-  '4300cf1907090100',
+  0x4300cf1900090100,
+  0x4300cf1909090100,
+  0x4300cf1907090100,
 ];
 
 const DRONE_PREFIXES = [
@@ -66,12 +66,15 @@ class DroneConnection extends EventEmitter {
    * @return {undefined}
    * @private
    */
-  _onNobleStateChange(state) {
+  async _onNobleStateChange(state) {
     Logger.debug(`Noble state changed to ${state}`);
 
-    if (state === 'poweredOn') {
-      Logger.info('Searching for drones...');
-      this.noble.startScanning();
+    while (state === 'poweredOn' && !this._peripheral) {
+      const result = await this.noble.startScanningAsync();
+
+      if (result) {
+          this._onPeripheralDiscovery(result);
+      }
     }
   }
 
@@ -83,23 +86,30 @@ class DroneConnection extends EventEmitter {
    * @return {undefined}
    * @private
    */
-  _onPeripheralDiscovery(peripheral) {
-    if (!this._validatePeripheral(peripheral)) {
+  async _onPeripheralDiscovery(peripheral) {
+    if (this._peripheral || !this._validatePeripheral(peripheral)) {
       return;
     }
 
     Logger.info(`Peripheral found ${peripheral.advertisement.localName}`);
 
-    this.noble.stopScanning();
+    this._peripheral = peripheral;
 
-    peripheral.connect((error) => {
-      if (error) {
-        throw error;
-      }
-      this._peripheral = peripheral;
+    if (['disconnecting', 'disconnected', 'error'].includes(peripheral.state)) {
+      Logger.info(`Connecting to peripheral`);
 
-      this._setupPeripheral();
-    });
+      await peripheral.connectAsync();
+    }
+
+    if (['connecting', 'connected'].includes(peripheral.state)) {
+      Logger.info("Connected")
+    } else {
+      Logger.info("Something went wrong: " + peripheral.state)
+
+      this._peripheral = null;
+    }
+
+    this._setupPeripheral();
   }
 
   /**
@@ -109,12 +119,12 @@ class DroneConnection extends EventEmitter {
    * @private
    */
   _validatePeripheral(peripheral) {
-    if (!peripheral) {
+    if (typeof peripheral !== 'object') {
       return false;
     }
 
-    const localName = peripheral.advertisement.localName;
-    const manufacturer = peripheral.advertisement.manufacturerData;
+    const localName = peripheral.advertisement?.localName;
+    const manufacturer = peripheral.advertisement?.manufacturerData;
     const matchesFilter = this.droneFilter ? localName === this.droneFilter : false;
 
     const localNameMatch = matchesFilter || DRONE_PREFIXES.some((prefix) => localName && localName.indexOf(prefix) >= 0);
