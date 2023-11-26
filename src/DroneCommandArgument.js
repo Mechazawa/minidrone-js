@@ -24,10 +24,8 @@ class DroneCommandArgument {
       const enumData = {};
       let enumValue = 0;
 
-      for (const option of raw.enum) {
-        const enumName = option.$.name;
-
-        enumData[enumName] = enumValue++;
+      for (const {$: {name}} of raw.enum) {
+        enumData[name] = enumValue++;
       }
 
       this._enum = new Enum(enumData);

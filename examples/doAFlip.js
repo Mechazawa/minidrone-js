@@ -10,12 +10,14 @@ const backFlip = parser.getCommand('minidrone', 'Animations', 'Flip', {direction
 connector.connect();
 
 drone.on('connected', () => {
+  console.log('Connected!')
+
   // Makes the code a bit clearer
   const runCommand = x => drone.runCommand(x);
 
-  runCommand(takeoff);
+  // runCommand(takeoff);
 
-  setTimeout(runCommand, 2000, backFlip);
-  setTimeout(runCommand, 4000, landing);
+  // setTimeout(runCommand, 2000, backFlip);
+  // setTimeout(runCommand, 2000, landing);
   setTimeout(process.exit, 5000);
 });

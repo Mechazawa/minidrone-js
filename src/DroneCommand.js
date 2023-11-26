@@ -1,6 +1,6 @@
 const DroneCommandArgument = require('./DroneCommandArgument');
 const Enum = require('./util/Enum');
-const { characteristicSendUuids } = require('./CharacteristicEnums');
+const { sendUuids, serviceUuids} = require('./CharacteristicEnums');
 const { bufferType, bufferCharacteristicTranslationMap, bufferIds } = require('./BufferEnums');
 
 /**
@@ -197,9 +197,7 @@ class DroneCommand {
     let bufferOffset = 4;
 
     const bufferLength = bufferOffset + this.arguments.reduce((acc, val) => val.getValueSize() + acc, 0);
-    const buffer = new Buffer(bufferLength);
-
-    buffer.fill(0);
+    const buffer = Buffer.alloc(bufferLength, 0);
 
     // Skip command counter (offset 1) because it's set in DroneConnection::runCommand
 

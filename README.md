@@ -22,16 +22,8 @@ and sending commands based on the [xml specification].
 
 ## Installation
 
-Using yarn
-
 ```bash
-yarn add minidrone-js
-```
-
-or using npm
-
-```bash
-npm install minidrone-js
+npm install minidrone-js --save
 ```
 
 ## Example
@@ -58,21 +50,23 @@ function sleep(ms) {
   return new Promise(a => setTimeout(a, ms));
 }
 
-drone.on('connected', async () => {
+void async function() {
+  await new Promise(resolve => drone.once('connected', resolve));
+
   // Makes the code a bit clearer
   const runCommand = x => drone.runCommand(x);
 
   await runCommand(takeoff);
-  
+
   await sleep(2000);
   await runCommand(backFlip);
-  
+
   await sleep(2000);
   await runCommand(landing);
 
   await sleep(5000);
   process.exit();
-});
+}();
 ```
 
 ## Troubleshooting

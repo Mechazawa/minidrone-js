@@ -66,6 +66,7 @@ class DroneConnection extends EventEmitter {
    * @param {string} channelUuid - The channel uuid
    * @param {Buffer} buffer - The packet data
    * @private
+   * @returns {void}
    */
   _handleIncoming(buffer) {
     const type = bufferType.findForValue(buffer.readUInt8(0));
@@ -96,6 +97,7 @@ class DroneConnection extends EventEmitter {
    * @param {Buffer} buffer - Command buffer
    * @private
    * @fires DroneConnection#sensor:
+   * @returns {void}
    */
   _updateSensors(buffer) {
     if (buffer[2] === 0) {
@@ -165,6 +167,60 @@ class DroneConnection extends EventEmitter {
     }
 
     return command;
+  }
+
+  /**
+   * Get the logger level
+   * @returns {string|number} - logger level
+   * @see {@link https://github.com/winstonjs/winston}
+   */
+  get logLevel() {
+    return Logger.level;
+  }
+
+  /**
+   * Set the logger level
+   * @param {string|number} value - logger level
+   * @see {@link https://github.com/winstonjs/winston}
+   */
+  set logLevel(value) {
+    Logger.level = typeof value === 'number' ? value : value.toString();
+  }
+
+  /**
+   * used to count the drone command steps
+   * @param {string} id - Step store id
+   * @returns {number} - step number
+   */
+  _getStep(id) {
+    if (typeof this._stepStore[id] === 'undefined') {
+      this._stepStore[id] = 0;
+    }
+
+    const out = this._stepStore[id];
+
+    this._stepStore[id]++;
+    this._stepStore[id] &= 0xFF;
+
+    return out;
+  }
+
+  /**
+   * Acknowledge a packet
+   * @param {number} packetId - ID of the packet to ack
+   * @returns {void}
+   */
+  ack(packetId) {
+    Logger.debug('ACK: packet id ' + packetId);
+
+    const characteristic = sendUuids.ACK_COMMAND;
+    const buffer = Buffer.alloc(3);
+
+    buffer.writeUIntLE(Number.parseInt('0x' + characteristic), 0, 1);
+    buffer.writeUIntLE(this._getStep(characteristic), 1, 1);
+    buffer.writeUIntLE(packetId, 2, 1);
+
+    this.getCharacteristic(serviceUuids.ARCOMMAND_SENDING_SERVICE + characteristic).write(buffer, true);
   }
 }
 
