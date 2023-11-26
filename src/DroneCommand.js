@@ -1,36 +1,7 @@
 const DroneCommandArgument = require('./DroneCommandArgument');
 const Enum = require('./util/Enum');
 const { sendUuids, serviceUuids} = require('./CharacteristicEnums');
-
-/**
- * Buffer types
- *
- * @property {number} ACK - Acknowledgment of previously received data
- * @property {number} DATA - Normal data (no ack requested)
- * @property {number} NON_ACK - Same as DATA
- * @property {number} HIGH_PRIO - Not sure about this one could be LLD
- * @property {number} LOW_LATENCY_DATA - Treated as normal data on the network, but are given higher priority internally
- * @property {number} DATA_WITH_ACK - Data requesting an ack. The receiver must send an ack for this data unit!
- *
- * @type {Enum}
- */
-const bufferType = new Enum({
-  ACK: 0x02,
-  DATA: 0x02,
-  NON_ACK: 0x02,
-  HIGH_PRIO: 0x02,
-  LOW_LATENCY_DATA: 0x03,
-  DATA_WITH_ACK: 0x04,
-});
-
-const bufferCharTranslationMap = new Enum({
-  ACK: 'ACK_COMMAND',
-  DATA: 'SEND_NO_ACK',
-  NON_ACK: 'SEND_NO_ACK',
-  HIGH_PRIO: 'SEND_HIGH_PRIORITY',
-  LOW_LATENCY_DATA: 'SEND_NO_ACK',
-  DATA_WITH_ACK: 'SEND_WITH_ACK',
-});
+const { bufferType, bufferCharacteristicTranslationMap, bufferIds } = require('./BufferEnums');
 
 /**
  * Drone command
@@ -171,13 +142,19 @@ class DroneCommand {
   }
 
   /**
+   * Get the send characteristic
+   * @returns {string} - send characteristic
+   */
+  get sendCharacteristic() {
+    return bufferCharacteristicTranslationMap[this.bufferType] || 'SEND_WITH_ACK';
+  }
+
+  /**
    * Get the send characteristic uuid based on the buffer type
    * @returns {string} - uuid as a string
    */
   get sendCharacteristicUuid() {
-    const t = bufferCharTranslationMap[this.bufferType] || 'SEND_WITH_ACK';
-
-    return serviceUuids.ARCOMMAND_SENDING_SERVICE + sendUuids[t];
+    return sendUuids[this.sendCharacteristic];
   }
 
   /**
@@ -217,18 +194,16 @@ class DroneCommand {
    * @throws TypeError
    */
   toBuffer() {
-    const bufferLength = 6 + this.arguments.reduce((acc, val) => val.getValueSize() + acc, 0);
-    const buffer = Buffer.alloc(bufferLength, 0);
+    let bufferOffset = 4;
 
-    buffer.writeUInt16LE(this.bufferFlag, 0);
+    const bufferLength = bufferOffset + this.arguments.reduce((acc, val) => val.getValueSize() + acc, 0);
+    const buffer = Buffer.alloc(bufferLength, 0);
 
     // Skip command counter (offset 1) because it's set in DroneConnection::runCommand
 
-    buffer.writeUInt16LE(this.projectId, 2);
-    buffer.writeUInt16LE(this.classId, 3);
-    buffer.writeUInt16LE(this.commandId, 4); // two bytes
-
-    let bufferOffset = 6;
+    buffer.writeUInt8(this.projectId, 0);
+    buffer.writeUInt8(this.classId, 1);
+    buffer.writeUInt16LE(this.commandId, 2); // two bytes
 
     for (const arg of this.arguments) {
       const valueSize = arg.getValueSize();
@@ -310,6 +285,10 @@ class DroneCommand {
    */
   get bufferType() {
     return this._buffer.toUpperCase();
+  }
+
+  get bufferId() {
+    return bufferIds[this.sendCharacteristic];
   }
 
   /**

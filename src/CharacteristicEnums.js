@@ -17,10 +17,10 @@ const Enum = require('./util/Enum');
  * @type {Enum}
  */
 const sendUuids = new Enum({
-  SEND_NO_ACK: '0a', // not-ack commands (PCMD only)
-  SEND_WITH_ACK: '0b', // ack commands (all piloting commands)
-  SEND_HIGH_PRIORITY: '0c', // emergency commands
-  ACK_COMMAND: '1e', // ack for data sent on 0e
+  SEND_NO_ACK: 'fa0a', // not-ack commands (PCMD only)
+  SEND_WITH_ACK: 'fa0b', // ack commands (all piloting commands)
+  SEND_HIGH_PRIORITY: 'fa0c', // emergency commands
+  ACK_COMMAND: 'fa1e', // ack for data sent on 0e
 });
 
 /**
@@ -34,11 +34,27 @@ const sendUuids = new Enum({
  * @type {Enum}
  */
 const receiveUuids = new Enum({
-  ACK_DRONE_DATA: '0e', // drone data that needs an ack (needs to be ack on 1e)
-  NO_ACK_DRONE_DATA: '0f', // data from drone (including battery and others), no ack
-  ACK_COMMAND_SENT: '1b', // ack 0b channel, SEND_WITH_ACK
-  ACK_HIGH_PRIORITY: '1c', // ack 0c channel, SEND_HIGH_PRIORITY
+  ACK_DRONE_DATA: 'fb0e', // drone data that needs an ack (needs to be ack on 1e)
+  NO_ACK_DRONE_DATA: 'fb0f', // data from drone (including battery and others), no ack
+  ACK_COMMAND_SENT: 'fb1b', // ack 0b channel, SEND_WITH_ACK
+  ACK_HIGH_PRIORITY: 'fb1c', // ack 0c channel, SEND_HIGH_PRIORITY
 });
+
+/**
+ * Receive and send characteristsic UUIDs
+ *
+ * @property {string} ACK_DRONE_DATA - drone data that needs an ack (needs to be ack on 1e)
+ * @property {string} NO_ACK_DRONE_DATA - data from drone (including battery and others), no ack
+ * @property {string} ACK_COMMAND_SENT - ack 0b channel, SEND_WITH_ACK
+ * @property {string} ACK_HIGH_PRIORITY - ack 0c channel, SEND_HIGH_PRIORITY
+ * @property {string} SEND_NO_ACK - not-ack commands (PCMD only)
+ * @property {string} SEND_WITH_ACK - ack commands (all piloting commands)
+ * @property {string} SEND_HIGH_PRIORITY - emergency commands
+ * @property {string} ACK_COMMAND - ack for data sent on 0e
+ *
+ * @type {Enum}
+ */
+const characteristicUuids = new Enum(Object.assign({}, sendUuids, receiveUuids));
 
 /**
  * @see http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
@@ -68,4 +84,5 @@ module.exports = {
   receiveUuids,
   serviceUuids,
   handshakeUuids,
+  characteristicUuids,
 };

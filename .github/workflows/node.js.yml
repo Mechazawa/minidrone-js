@@ -1,6 +1,10 @@
 name: Node CI
 
-on: [push, pull_request]
+on:
+  pull_request:
+  push:
+    branches:
+      - 'master'
 
 jobs:
   build:
@@ -16,6 +20,8 @@ jobs:
       uses: actions/setup-node@v2
       with:
         node-version: ${{ matrix.node-version }}
+    - name: Install OS Packages
+      run: sudo apt update && sudo apt install libavahi-compat-libdnssd-dev \
     - name: Cache node modules
       id: cache-npm
       uses: actions/cache@v3

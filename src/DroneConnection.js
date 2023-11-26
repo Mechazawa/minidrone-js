@@ -1,23 +1,7 @@
 const EventEmitter = require('events');
 const Logger = require('winston');
 const CommandParser = require('./CommandParser');
-const { sendUuids, receiveUuids, serviceUuids, handshakeUuids} = require('./CharacteristicEnums');
-
-const MANUFACTURER_SERIALS = [
-  0x4300cf1900090100,
-  0x4300cf1909090100,
-  0x4300cf1907090100,
-];
-
-const DRONE_PREFIXES = [
-  'RS_',
-  'Mars_',
-  'Travis_',
-  'Maclan_',
-  'Mambo_',
-  'Blaze_',
-  'NewZ_',
-];
+const { bufferType } = require('./BufferEnums');
 
 /**
  * Drone connection class
@@ -32,196 +16,39 @@ const DRONE_PREFIXES = [
 class DroneConnection extends EventEmitter {
   /**
    * Creates a new DroneConnection instance
-   * @param {string} [droneFilter=] - The drone name leave blank for no filter
+   * @param {BLEConnector} connector - The drone connector to use (BLE, Wifi)
    * @param {boolean} [warmup=true] - Warmup the command parser
    */
-  constructor(droneFilter = '', warmup = true) {
+  constructor(connector, warmup = true) {
     super();
 
-    this.characteristics = [];
-
-    this._characteristicLookupCache = {};
     this._commandCallback = {};
     this._sensorStore = {};
-    this._stepStore = {};
 
-    this.droneFilter = droneFilter;
+    this.connector = connector;
 
-    this.noble = require('@abandonware/noble');
+    this.connector.on('disconnect', () => this.emit('disconnect'));
+    this.connector.on('connected', () => this.emit('connected'));
+
+    this.connector.on('incoming', command => {
+      // @todo move code
+
+      this._sensorStore[command.getToken()] = command;
+    });
+
     this.parser = new CommandParser();
 
     if (warmup) {
       // We'll do it for you so you don't have to
       this.parser.warmup();
     }
-
-    // bind noble event handlers
-    this.noble.on('stateChange', state => this._onNobleStateChange(state));
-    this.noble.on('discover', peripheral => this._onPeripheralDiscovery(peripheral));
-  }
-
-  /**
-   * Event handler for when noble broadcasts a state change
-   * @param  {String} state a string describing noble's state
-   * @return {undefined}
-   * @private
-   */
-  async _onNobleStateChange(state) {
-    Logger.debug(`Noble state changed to ${state}`);
-
-    while (state === 'poweredOn' && !this._peripheral) {
-      const result = await this.noble.startScanningAsync();
-
-      if (typeof result === 'object') {
-          this._onPeripheralDiscovery(result);
-      }
-    }
-  }
-
-  /**
-   * Event handler for when noble discovers a peripheral
-   * Validates it is a drone and attempts to connect.
-   *
-   * @param {Peripheral} peripheral a noble peripheral class
-   * @return {undefined}
-   * @private
-   */
-  async _onPeripheralDiscovery(peripheral) {
-    if (this._peripheral || !this._validatePeripheral(peripheral)) {
-      return;
-    }
-
-    Logger.info(`Peripheral found ${peripheral.advertisement.localName}`);
-
-    this._peripheral = peripheral;
-
-    if (['disconnecting', 'disconnected', 'error'].includes(peripheral.state)) {
-      Logger.info(`Connecting to peripheral`);
-
-      await peripheral.connectAsync();
-    }
-
-    if (['connecting', 'connected'].includes(peripheral.state)) {
-      await this.noble.stopScanningAsync();
-    } else {
-      Logger.info("Something went wrong: " + peripheral.state)
-
-      this._peripheral = null;
-    }
-
-    this._setupPeripheral();
-  }
-
-  /**
-   * Validates a noble Peripheral class is a Parrot MiniDrone
-   * @param {Peripheral} peripheral a noble peripheral object class
-   * @return {boolean} If the peripheral is a drone
-   * @private
-   */
-  _validatePeripheral(peripheral) {
-    if (typeof peripheral !== 'object') {
-      return false;
-    }
-
-    const localName = peripheral.advertisement?.localName;
-    const manufacturer = peripheral.advertisement?.manufacturerData;
-    const matchesFilter = this.droneFilter ? localName === this.droneFilter : false;
-
-    const localNameMatch = matchesFilter || DRONE_PREFIXES.some((prefix) => localName && localName.indexOf(prefix) >= 0);
-    const manufacturerMatch = manufacturer && MANUFACTURER_SERIALS.indexOf(manufacturer) >= 0;
-
-    // Is TRUE according to droneFilter or if empty, for EITHER an "RS_" name OR manufacturer code.
-    return localNameMatch || manufacturerMatch;
-  }
-
-  /**
-   * Sets up a peripheral and finds all of it's services and characteristics
-   * @return {undefined}
-   */
-  _setupPeripheral() {
-    this.peripheral.discoverAllServicesAndCharacteristics((err, services, characteristics) => {
-      if (err) {
-        throw err;
-      }
-
-      this.characteristics = characteristics;
-
-      if (Logger.level === 'debug') {
-        Logger.debug('Found the following characteristics:');
-
-        // Get uuids
-        const characteristicUuids = this.characteristics.map(x => x.uuid.substr(4, 4).toLowerCase());
-
-        characteristicUuids.sort();
-
-        characteristicUuids.join(', ').replace(/([^\n]{40,}?), /g, '$1|').split('|').map(s => Logger.debug(s));
-      }
-
-      Logger.debug('Preforming handshake');
-      for (const uuid of handshakeUuids) {
-        const target = this.getCharacteristic(uuid);
-
-        target.subscribe();
-      }
-
-      Logger.debug('Adding listeners (fb uuid prefix)');
-      for (const uuid of receiveUuids.values()) {
-        const target = this.getCharacteristic(serviceUuids.ARCOMMAND_RECEIVING_SERVICE + uuid);
-
-        target.subscribe();
-        target.on('data', data => this._handleIncoming(uuid, data));
-      }
-
-      Logger.info(`Device connected ${this.peripheral.advertisement.localName}`);
-
-      // Register some event handlers
-      /**
-       * Drone disconnected event
-       * Fired when the bluetooth connection has been disconnected
-       *
-       * @event DroneCommand#disconnected
-       */
-      this.noble.on('disconnect', () => this.emit('disconnected'));
-
-      setTimeout(() => {
-        /**
-         * Drone connected event
-         * You can control the drone once this event has been triggered.
-         *
-         * @event DroneCommand#connected
-         */
-        this.emit('connected');
-      }, 200);
-    });
-  }
-
-  /**
-   * @returns {Peripheral} a noble peripheral object class
-   */
-  get peripheral() {
-    return this._peripheral;
   }
 
   /**
    * @returns {boolean} If the drone is connected
    */
   get connected() {
-    return this.characteristics.length > 0;
-  }
-
-  /**
-   * Finds a Noble Characteristic class for the given characteristic UUID
-   * @param {String} uuid The characteristics UUID
-   * @return {Characteristic} The Noble Characteristic corresponding to that UUID
-   */
-  getCharacteristic(uuid) {
-    uuid = uuid.toLowerCase();
-
-    if (typeof this._characteristicLookupCache[uuid] === 'undefined') {
-      this._characteristicLookupCache[uuid] = this.characteristics.find(x => x.uuid.substr(4, 4).toLowerCase() === uuid);
-    }
-
-    return this._characteristicLookupCache[uuid];
+    return this.connector.connected;
   }
 
   /**
@@ -231,37 +58,7 @@ class DroneConnection extends EventEmitter {
    * @async
    */
   runCommand(command) {
-    const buffer = command.toBuffer();
-    const packetId = this._getStep(command.bufferType);
-
-    buffer.writeUIntLE(packetId, 1, 1);
-
-    return new Promise(accept => {
-      Logger.debug(`SEND ${command.bufferType}[${packetId}]: `, command.toString());
-
-      this.getCharacteristic(command.sendCharacteristicUuid).write(buffer, true);
-
-      switch (command.bufferType) {
-        case 'DATA_WITH_ACK':
-        case 'SEND_WITH_ACK':
-          if (!this._commandCallback['ACK_COMMAND_SENT']) {
-            this._commandCallback['ACK_COMMAND_SENT'] = [];
-          }
-
-          this._commandCallback['ACK_COMMAND_SENT'][packetId] = accept;
-          break;
-        case 'SEND_HIGH_PRIORITY':
-          if (!this._commandCallback['ACK_HIGH_PRIORITY']) {
-            this._commandCallback['ACK_HIGH_PRIORITY'] = [];
-          }
-
-          this._commandCallback['ACK_HIGH_PRIORITY'][packetId] = accept;
-          break;
-        default:
-          accept();
-          break;
-      }
-    });
+    return this.connector.sendCommand(command);
   }
 
   /**
@@ -271,39 +68,26 @@ class DroneConnection extends EventEmitter {
    * @private
    * @returns {void}
    */
-  _handleIncoming(channelUuid, buffer) {
-    const channel = receiveUuids.findForValue(channelUuid);
-    let callback;
+  _handleIncoming(buffer) {
+    const type = bufferType.findForValue(buffer.readUInt8(0));
 
-    switch (channel) {
-      case 'ACK_DRONE_DATA':
-        // We need to response with an ack
-        this._updateSensors(buffer, true);
-        break;
-      case 'NO_ACK_DRONE_DATA':
-        this._updateSensors(buffer);
-        break;
-      case 'ACK_COMMAND_SENT':
-      case 'ACK_HIGH_PRIORITY':
-        const packetId = buffer.readUInt8(2);
 
-        callback = (this._commandCallback[channel] || {})[packetId];
+    if (type !== 'ACK') {
+      this._updateSensors(buffer);
+    } else {
+      // @todo figure out why two ACK's in a row are received
+      const packetId = buffer.readUInt8(2);
+      const callback = this._commandCallback[packetId];
 
-        if (callback) {
-          delete this._commandCallback[channel][packetId];
-        }
+      if (typeof callback === 'function') {
+        Logger.debug(`ACK_*: packet id ${packetId}`);
 
-        if (typeof callback === 'function') {
-          Logger.debug(`${channel}: packet id ${packetId}`);
-          callback();
-        } else {
-          Logger.debug(`${channel}: packet id ${packetId}, no callback  :(`);
-        }
+        delete this._commandCallback[packetId];
 
-        break;
-      default:
-        Logger.warn(`Got data on an unknown channel ${channel}(${channelUuid}) (wtf!?)`);
-        break;
+        callback();
+      } else {
+        Logger.debug(`ACK_*: packet id ${packetId}, no callback  :(`);
+      }
     }
   }
 
@@ -311,12 +95,11 @@ class DroneConnection extends EventEmitter {
    * Update the sensor
    *
    * @param {Buffer} buffer - Command buffer
-   * @param {boolean} ack - If an acknowledgement for receiving the data should be sent
    * @private
    * @fires DroneConnection#sensor:
    * @returns {void}
    */
-  _updateSensors(buffer, ack = false) {
+  _updateSensors(buffer) {
     if (buffer[2] === 0) {
       return;
     }
@@ -327,7 +110,11 @@ class DroneConnection extends EventEmitter {
 
       this._sensorStore[token] = command;
 
-      Logger.debug('RECV:', command.toString());
+      Logger.debug(`RECV ${command.bufferType}:`, command.toString());
+
+      if (command.shouldAck) {
+        // @todo ack
+      }
 
       /**
        * Fires when a new sensor reading has been received
@@ -346,12 +133,6 @@ class DroneConnection extends EventEmitter {
     } catch (e) {
       Logger.warn('Unable to parse packet:', buffer);
       Logger.warn(e);
-    }
-
-    if (ack) {
-      const packetId = buffer.readUInt8(1);
-
-      this.ack(packetId);
     }
   }
 
