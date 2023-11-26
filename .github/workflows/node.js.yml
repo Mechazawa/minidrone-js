@@ -17,7 +17,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - name: Install OS Packages
-      run: apt update && apt install libavahi-compat-libdnssd-dev \
+      run: sudo apt update && sudo apt install libavahi-compat-libdnssd-dev \
     - name: Cache node modules
       id: cache-npm
       uses: actions/cache@v3
