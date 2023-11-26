@@ -102,7 +102,7 @@ class DroneConnection extends EventEmitter {
     }
 
     if (['connecting', 'connected'].includes(peripheral.state)) {
-      Logger.info("Connected")
+      await this.noble.stopScanningAsync();
     } else {
       Logger.info("Something went wrong: " + peripheral.state)
 
