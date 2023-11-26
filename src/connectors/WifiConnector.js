@@ -28,18 +28,22 @@ class WifiConnector extends BaseConnector {
   /**
    * @inheritDoc
    */
-  connect() {
-    if (!this.browser && !this.server && !this.client) {
+  connect(host = null, port = null) {
+    if (!(!this.browser && !this.server && !this.client)) {
+      return new Promise(accept => accept());
+    } else if (host && port) {
+      return this._connect(host, port);
+    } else {
       Logger.debug('Starting mDNS browser');
 
       const resolverSequence = [
         // eslint-disable-next-line new-cap
         mdns.rst.DNSServiceResolve(),
         // eslint-disable-next-line new-cap
-        mdns.rst.DNSServiceGetAddrInfo({ families: [4] }),
+        mdns.rst.DNSServiceGetAddrInfo({families: [4]}),
       ];
 
-      this.browser = mdns.createBrowser(mdns.udp('_arsdk-090b'), { resolverSequence }); // @todo browse all
+      this.browser = mdns.createBrowser(mdns.udp('_arsdk-090b'), {resolverSequence}); // @todo browse all
 
       return new Promise(accept => {
         this.browser.on('serviceUp', service => this._onMdnsServiceDiscovery(service).then(c => !c || accept()));
@@ -47,8 +51,6 @@ class WifiConnector extends BaseConnector {
         this.browser.start();
       });
     }
-
-    return new Promise(accept => accept());
   }
 
   /**
@@ -85,14 +87,14 @@ class WifiConnector extends BaseConnector {
     return true;
   }
 
-  async _connect(service) {
-    Logger.info(`Doing Wifi handshake with ${service.addresses[0]} [${service.addresses.join(', ')}]`);
+  async _connect(host, port) {
+    Logger.info(`Doing Wifi handshake with ${host}`);
 
     await this._startServer();
 
-    this.ip = service.addresses[0];
+    this.ip = host;
 
-    let data = await this._sendHandshake(this.ip, service.port);
+    let data = await this._sendHandshake(this.ip, port);
 
     data = data.toString();
     data = data.replace('\0', ''); // Remove trailing nullbyte

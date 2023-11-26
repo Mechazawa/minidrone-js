@@ -54,7 +54,7 @@ const receiveUuids = new Enum({
  *
  * @type {Enum}
  */
-const characteristicUuids = new Enum(Object.assign({}, characteristicSendUuids, characteristicReceiveUuids));
+const characteristicUuids = new Enum(Object.assign({}, sendUuids, receiveUuids));
 
 /**
  * @see http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3

@@ -1,4 +1,4 @@
-const noble = require('noble');
+const noble = require('@abandonware/noble');
 const BaseConnector = require('./BaseConnector');
 const Logger = require('winston');
 const Enum = require('../util/Enum');

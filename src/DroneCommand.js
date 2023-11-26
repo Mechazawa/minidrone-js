@@ -154,7 +154,7 @@ class DroneCommand {
    * @returns {string} - uuid as a string
    */
   get sendCharacteristicUuid() {
-    return characteristicSendUuids[this.sendCharacteristic];
+    return sendUuids[this.sendCharacteristic];
   }
 
   /**
