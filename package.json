@@ -20,7 +20,6 @@
   },
   "devDependencies": {
     "mdns": "^2.4.0",
-    "minami-compat": "1.2.4",
     "ava": "5.3.1",
     "eslint": "^8.54.0",
     "jsdoc": "^4.0.2"
