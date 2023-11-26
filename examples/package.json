@@ -6,5 +6,10 @@
     "minidrone-js": "file:../",
     "winston": "^2.4.0",
     "dualshock-controller": "^1.1.1"
+  },
+  "overrides": {
+    "dualshock-controller": {
+      "node-hid": "^2.2.0"
+    }
   }
 }
