@@ -3,6 +3,10 @@
     "browser": true,
     "es6": true
   },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "script"
+  },
   "extends": "eslint:recommended",
   "globals": {
     "global": false,
@@ -13,9 +17,6 @@
 
     "VERSION": false,
     "LICENSE": false
-  },
-  "parserOptions": {
-    "ecmaVersion": 2017
   },
   "rules": {
     "comma-dangle": [1,"always-multiline"],
