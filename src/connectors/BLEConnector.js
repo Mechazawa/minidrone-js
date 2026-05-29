@@ -206,6 +206,13 @@ class BLEConnector extends BaseConnector {
     return this.characteristics.length > 0;
   }
 
+  /**
+   * Send a command to the drone
+   * @param {DroneCommand} command - Command to send
+   * @returns {Promise} - Resolves once the drone acknowledges the command (if it requires an
+   *                       ack) or immediately otherwise; rejects if the ack times out
+   * @async
+   */
   sendCommand(command) {
     const buffer = Buffer.concat([Buffer.alloc(2), command.toBuffer()]);
     const packetId = this._getStep(command.bufferFlag);
@@ -213,18 +220,32 @@ class BLEConnector extends BaseConnector {
     buffer.writeUInt16LE(command.bufferFlag, 0);
     buffer.writeUInt8(packetId, 1);
 
-    return new Promise(accept => {
-      Logger.debug(`SEND ${command.bufferType}[${packetId}]: `, command.toString());
+    Logger.debug(`SEND ${command.bufferType}[${packetId}]: `, command.toString());
 
-      if (command.shouldAck) {
-        // @todo ack
-        // this._commandCallback[packetId] = accept;
-        setTimeout(accept, 100);
-      } else {
+    const promise = new Promise((accept, reject) => {
+      if (!command.shouldAck) {
         accept();
+
+        return;
       }
-      this.write(buffer, command.sendCharacteristicUuid);
+
+      // The drone replies with an ACK frame carrying this packet id; resolve then.
+      const timeout = setTimeout(() => {
+        delete this._commandCallback[packetId];
+
+        reject(new Error('Command timed out after 5 seconds'));
+      }, 5 * 1000);
+
+      this._commandCallback[packetId] = () => {
+        clearTimeout(timeout);
+
+        accept();
+      };
     });
+
+    this.write(buffer, command.sendCharacteristicUuid);
+
+    return promise;
   }
 
   /**
@@ -242,7 +263,19 @@ class BLEConnector extends BaseConnector {
     const type = bufferType.findForValue(data.readUInt8(0));
 
     if (type === 'ACK') {
-      // @todo resolve sendCommand callbacks for BLE acks
+      const packetId = data.readUInt8(2);
+      const callback = this._commandCallback[packetId];
+
+      if (typeof callback === 'function') {
+        Logger.debug(`ACK: packet id ${packetId}`);
+
+        delete this._commandCallback[packetId];
+
+        callback();
+      } else {
+        Logger.debug(`ACK: packet id ${packetId}, no callback`);
+      }
+
       return;
     }
 
