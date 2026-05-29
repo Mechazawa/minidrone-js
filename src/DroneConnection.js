@@ -4,8 +4,11 @@ const CommandParser = require('./CommandParser');
 const { sendUuids, receiveUuids, serviceUuids, handshakeUuids} = require('./CharacteristicEnums');
 
 const MANUFACTURER_SERIALS = [
+  // eslint-disable-next-line no-loss-of-precision
   0x4300cf1900090100,
+  // eslint-disable-next-line no-loss-of-precision
   0x4300cf1909090100,
+  // eslint-disable-next-line no-loss-of-precision
   0x4300cf1907090100,
 ];
 
@@ -73,7 +76,7 @@ class DroneConnection extends EventEmitter {
       const result = await this.noble.startScanningAsync();
 
       if (typeof result === 'object') {
-          this._onPeripheralDiscovery(result);
+        this._onPeripheralDiscovery(result);
       }
     }
   }
@@ -96,7 +99,7 @@ class DroneConnection extends EventEmitter {
     this._peripheral = peripheral;
 
     if (['disconnecting', 'disconnected', 'error'].includes(peripheral.state)) {
-      Logger.info(`Connecting to peripheral`);
+      Logger.info('Connecting to peripheral');
 
       await peripheral.connectAsync();
     }
@@ -104,7 +107,7 @@ class DroneConnection extends EventEmitter {
     if (['connecting', 'connected'].includes(peripheral.state)) {
       await this.noble.stopScanningAsync();
     } else {
-      Logger.info("Something went wrong: " + peripheral.state)
+      Logger.info('Something went wrong: ' + peripheral.state);
 
       this._peripheral = null;
     }
