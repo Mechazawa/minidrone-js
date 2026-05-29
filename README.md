@@ -31,10 +31,14 @@ npm install minidrone-js --save
 This example will make the drone take-off, do a flip and then land again.
 
 ```js
-const {DroneConnection, CommandParser} = require('minidrone-js');
+const {DroneConnection, CommandParser, BLEConnector} = require('minidrone-js');
 
 const parser = new CommandParser();
-const drone = new DroneConnection();
+
+// Pick a connector for your drone: BLEConnector() for Bluetooth or
+// WifiConnector() for Wifi drones. The DroneConnection wraps it.
+const connector = new BLEConnector();
+const drone = new DroneConnection(connector);
 
 
 /* 
@@ -51,6 +55,8 @@ function sleep(ms) {
 }
 
 void async function() {
+  // connect() lives on the connector; the connection forwards its 'connected' event
+  await connector.connect();
   await new Promise(resolve => drone.once('connected', resolve));
 
   // Makes the code a bit clearer

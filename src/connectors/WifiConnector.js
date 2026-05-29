@@ -31,26 +31,28 @@ class WifiConnector extends BaseConnector {
   connect(host = null, port = null) {
     if (!(!this.browser && !this.server && !this.client)) {
       return new Promise(accept => accept());
-    } else if (host && port) {
-      return this._connect(host, port);
-    } else {
-      Logger.debug('Starting mDNS browser');
-
-      const resolverSequence = [
-        // eslint-disable-next-line new-cap
-        mdns.rst.DNSServiceResolve(),
-        // eslint-disable-next-line new-cap
-        mdns.rst.DNSServiceGetAddrInfo({families: [4]}),
-      ];
-
-      this.browser = mdns.createBrowser(mdns.udp('_arsdk-090b'), {resolverSequence}); // @todo browse all
-
-      return new Promise(accept => {
-        this.browser.on('serviceUp', service => this._onMdnsServiceDiscovery(service).then(c => !c || accept()));
-
-        this.browser.start();
-      });
     }
+
+    if (host && port) {
+      return this._connect(host, port);
+    }
+
+    Logger.debug('Starting mDNS browser');
+
+    const resolverSequence = [
+      // eslint-disable-next-line new-cap
+      mdns.rst.DNSServiceResolve(),
+      // eslint-disable-next-line new-cap
+      mdns.rst.DNSServiceGetAddrInfo({families: [4]}),
+    ];
+
+    this.browser = mdns.createBrowser(mdns.udp('_arsdk-090b'), {resolverSequence}); // @todo browse all
+
+    return new Promise(accept => {
+      this.browser.on('serviceUp', service => this._onMdnsServiceDiscovery(service).then(c => !c || accept()));
+
+      this.browser.start();
+    });
   }
 
   /**
@@ -77,7 +79,9 @@ class WifiConnector extends BaseConnector {
     Logger.debug(`Found drone ${service.name}`);
 
     try {
-      await this._connect(service);
+      const host = service.addresses && service.addresses[0] || service.host;
+
+      await this._connect(host, service.port);
     } catch (e) {
       this.disconnect();
 
@@ -180,7 +184,7 @@ class WifiConnector extends BaseConnector {
 
   /**
    * Write raw buffer to the drone
-   * @param {Buffer} buffer
+   * @param {Buffer} buffer - The raw packet data to send to the drone
    * @returns {number} - Resolves with the number of bytes sent
    * @async
    */
@@ -189,6 +193,8 @@ class WifiConnector extends BaseConnector {
       this.client.send(buffer, 0, buffer.length, this.port, this.ip, err => {
         if (err) {
           reject(err);
+
+          return;
         }
 
         accept(buffer.length);
@@ -202,7 +208,19 @@ class WifiConnector extends BaseConnector {
    * @returns {void}
    */
   disconnect() {
-    this.server.close();
+    if (this.browser) {
+      this.browser.stop();
+    }
+
+    if (this.client) {
+      this.client.close();
+    }
+
+    if (this.server) {
+      // Prevent the 'close' handler from re-entering disconnect()
+      this.server.removeAllListeners('close');
+      this.server.close();
+    }
 
     delete this.browser;
     delete this.server;
@@ -222,7 +240,7 @@ class WifiConnector extends BaseConnector {
    */
   async sendCommand(command) {
     const commandBuffer = command.toBuffer();
-    const buffer = Buffer.concat([new Buffer(7), commandBuffer]);
+    const buffer = Buffer.concat([Buffer.alloc(7), commandBuffer]);
     const bufferId = command.bufferId;
     const packetId = this._getStep(bufferId);
 
@@ -231,7 +249,7 @@ class WifiConnector extends BaseConnector {
     buffer.writeUInt8(packetId, 2); // sequence number
     buffer.writeUInt32LE(commandBuffer.length + 7, 3); // frame size
 
-    this.write(buffer, command.sendCharacteristicUuid);
+    await this.write(buffer);
 
     try {
       return await this._setAckCallback(command, packetId);
@@ -254,8 +272,10 @@ class WifiConnector extends BaseConnector {
 
         const callback = (this._commandCallback[bufferId] || {})[packetId];
 
-        if (typeof callback.accept === 'function') {
+        if (callback && typeof callback.accept === 'function') {
           callback.accept();
+
+          delete this._commandCallback[bufferId][packetId];
         }
 
         break;
@@ -269,6 +289,7 @@ class WifiConnector extends BaseConnector {
         ackBuffer.writeUInt8(buffer.readUInt8(2), 7);
 
         this.write(ackBuffer);
+      // falls through
       case 'DATA':
       case 'LOW_LATENCY_DATA':
         const frame = buffer.slice(7);

@@ -1,47 +1,51 @@
 const EventEmitter = require('events');
 const Logger = require('winston');
-const CommandParser = require('./CommandParser');
-const { bufferType } = require('./BufferEnums');
 
 /**
  * Drone connection class
  *
- * Exposes an api for controlling the drone
+ * Wraps a {@link BaseConnector} (BLE or Wifi) and exposes an api for controlling the drone.
+ * All transport specific logic lives in the connector; this class only forwards its events
+ * and delegates command/sensor calls to it.
  *
- * @fires DroneCommand#connected
- * @fires DroneCommand#disconnected
- * @fires DroneCommand#sensor:
- * @property {CommandParser} parser - {@link CommandParser} instance
+ * @fires DroneConnection#connected
+ * @fires DroneConnection#disconnected
+ * @fires DroneConnection#sensor:
+ * @property {BaseConnector} connector - The underlying drone connector
  */
 class DroneConnection extends EventEmitter {
   /**
    * Creates a new DroneConnection instance
-   * @param {BLEConnector} connector - The drone connector to use (BLE, Wifi)
+   * @param {BaseConnector} connector - The drone connector to use (BLE, Wifi)
    * @param {boolean} [warmup=true] - Warmup the command parser
    */
   constructor(connector, warmup = true) {
     super();
 
-    this._commandCallback = {};
-    this._sensorStore = {};
-
     this.connector = connector;
 
-    this.connector.on('disconnect', () => this.emit('disconnect'));
+    // Forward the connector's lifecycle events on the connection instance
     this.connector.on('connected', () => this.emit('connected'));
+    this.connector.on('disconnected', () => this.emit('disconnected'));
 
-    this.connector.on('incoming', command => {
-      // @todo move code
-
-      this._sensorStore[command.getToken()] = command;
+    // Re-emit sensor readings received by the connector
+    this.connector.on('sensor:*', command => {
+      this.emit('sensor:' + command.getToken(), command);
+      this.emit('sensor:*', command);
     });
-
-    this.parser = new CommandParser();
 
     if (warmup) {
       // We'll do it for you so you don't have to
       this.parser.warmup();
     }
+  }
+
+  /**
+   * Accessor for the {@link CommandParser} instance owned by the connector
+   * @returns {CommandParser} - {@link CommandParser} instance
+   */
+  get parser() {
+    return this.connector.parser;
   }
 
   /**
@@ -62,81 +66,6 @@ class DroneConnection extends EventEmitter {
   }
 
   /**
-   * Handles incoming data from the drone
-   * @param {string} channelUuid - The channel uuid
-   * @param {Buffer} buffer - The packet data
-   * @private
-   * @returns {void}
-   */
-  _handleIncoming(buffer) {
-    const type = bufferType.findForValue(buffer.readUInt8(0));
-
-
-    if (type !== 'ACK') {
-      this._updateSensors(buffer);
-    } else {
-      // @todo figure out why two ACK's in a row are received
-      const packetId = buffer.readUInt8(2);
-      const callback = this._commandCallback[packetId];
-
-      if (typeof callback === 'function') {
-        Logger.debug(`ACK_*: packet id ${packetId}`);
-
-        delete this._commandCallback[packetId];
-
-        callback();
-      } else {
-        Logger.debug(`ACK_*: packet id ${packetId}, no callback  :(`);
-      }
-    }
-  }
-
-  /**
-   * Update the sensor
-   *
-   * @param {Buffer} buffer - Command buffer
-   * @private
-   * @fires DroneConnection#sensor:
-   * @returns {void}
-   */
-  _updateSensors(buffer) {
-    if (buffer[2] === 0) {
-      return;
-    }
-
-    try {
-      const command = this.parser.parseBuffer(buffer.slice(2));
-      const token = [command.projectName, command.className, command.commandName].join('-');
-
-      this._sensorStore[token] = command;
-
-      Logger.debug(`RECV ${command.bufferType}:`, command.toString());
-
-      if (command.shouldAck) {
-        // @todo ack
-      }
-
-      /**
-       * Fires when a new sensor reading has been received
-       *
-       * @event DroneConnection#sensor:
-       * @type {DroneCommand} - The sensor reading
-       * @example
-       * connection.on('sensor:minidrone-UsbAccessoryState-GunState', function(sensor) {
-       *  if (sensor.state.value === sensor.state.enum.READY) {
-       *    console.log('The gun is ready to fire!');
-       *  }
-       * });
-       */
-      this.emit('sensor:' + token, command);
-      this.emit('sensor:*', command);
-    } catch (e) {
-      Logger.warn('Unable to parse packet:', buffer);
-      Logger.warn(e);
-    }
-  }
-
-  /**
    * Get the most recent sensor reading
    *
    * @param {string} project - Project name
@@ -146,9 +75,7 @@ class DroneConnection extends EventEmitter {
    * @see {@link https://github.com/Parrot-Developers/arsdk-xml/blob/master/xml/}
    */
   getSensor(project, class_, command) {
-    const token = [project, class_, command].join('-');
-
-    return this.getSensorFromToken(token);
+    return this.connector.getSensor(project, class_, command);
   }
 
   /**
@@ -160,13 +87,7 @@ class DroneConnection extends EventEmitter {
    * @see {@link DroneCommand.getToken}
    */
   getSensorFromToken(token) {
-    let command = this._sensorStore[token];
-
-    if (command) {
-      command = command.copy();
-    }
-
-    return command;
+    return this.connector.getSensorFromToken(token);
   }
 
   /**
@@ -185,42 +106,6 @@ class DroneConnection extends EventEmitter {
    */
   set logLevel(value) {
     Logger.level = typeof value === 'number' ? value : value.toString();
-  }
-
-  /**
-   * used to count the drone command steps
-   * @param {string} id - Step store id
-   * @returns {number} - step number
-   */
-  _getStep(id) {
-    if (typeof this._stepStore[id] === 'undefined') {
-      this._stepStore[id] = 0;
-    }
-
-    const out = this._stepStore[id];
-
-    this._stepStore[id]++;
-    this._stepStore[id] &= 0xFF;
-
-    return out;
-  }
-
-  /**
-   * Acknowledge a packet
-   * @param {number} packetId - ID of the packet to ack
-   * @returns {void}
-   */
-  ack(packetId) {
-    Logger.debug('ACK: packet id ' + packetId);
-
-    const characteristic = sendUuids.ACK_COMMAND;
-    const buffer = Buffer.alloc(3);
-
-    buffer.writeUIntLE(Number.parseInt('0x' + characteristic), 0, 1);
-    buffer.writeUIntLE(this._getStep(characteristic), 1, 1);
-    buffer.writeUIntLE(packetId, 2, 1);
-
-    this.getCharacteristic(serviceUuids.ARCOMMAND_SENDING_SERVICE + characteristic).write(buffer, true);
   }
 }
 

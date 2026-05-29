@@ -1,9 +1,10 @@
 const dualShock = require('dualshock-controller');
-const {DroneConnection, CommandParser} = require('minidrone-js');
+const {DroneConnection, CommandParser, WifiConnector} = require('minidrone-js');
 
 const controller = dualShock({config: 'dualShock4-alternate-driver'});
 const parser = new CommandParser();
-const drone = new DroneConnection();
+const connector = new WifiConnector();
+const drone = new DroneConnection(connector);
 const takeoff = parser.getCommand('minidrone', 'Piloting', 'TakeOff');
 const landing = parser.getCommand('minidrone', 'Piloting', 'Landing');
 const flatTrim = parser.getCommand('minidrone', 'Piloting', 'FlatTrim');
@@ -75,7 +76,7 @@ drone.on('connected', () => {
   });
 
   controller.on('circle:press', () => {
-    console.log(Object.values(drone._sensorStore).map(x=>x.toString()).join('\n'));
+    console.log(Object.values(connector._sensorStore).map(x=>x.toString()).join('\n'));
     drone.runCommand(allState);
   });
   controller.on('x:press', () => drone.runCommand(takeoff));
@@ -85,3 +86,5 @@ drone.on('connected', () => {
   controller.on('right:move', data => setFlightParams({yaw: joyToFlightParam(data.x), gaz: -joyToFlightParam(data.y)}));
   controller.on('left:move', data => setFlightParams({roll: joyToFlightParam(data.x), pitch: -joyToFlightParam(data.y)}));
 });
+
+connector.connect();

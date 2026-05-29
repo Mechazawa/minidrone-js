@@ -1,8 +1,8 @@
 const noble = require('@abandonware/noble');
 const BaseConnector = require('./BaseConnector');
 const Logger = require('winston');
-const Enum = require('../util/Enum');
-const { characteristicUuids, characteristicReceiveUuids } = require('../CharacteristicEnums');
+const { bufferType } = require('../BufferEnums');
+const { receiveUuids } = require('../CharacteristicEnums');
 
 const MANUFACTURER_SERIALS = [
   '4300cf1900090100',
@@ -27,20 +27,6 @@ const handshakeUuids = [
   'fd53', 'fd54',
 ];
 
-// the following UUID segments come from the Mambo and from the documenation at
-// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
-// the 3rd and 4th bytes are used to identify the service
-const serviceUuids = new Enum({
-  'fa': 'ARCOMMAND_SENDING_SERVICE',
-  'fb': 'ARCOMMAND_RECEIVING_SERVICE',
-  'fc': 'PERFORMANCE_COUNTER_SERVICE',
-  'fd21': 'NORMAL_BLE_FTP_SERVICE',
-  'fd51': 'UPDATE_BLE_FTP',
-  'fe00': 'UPDATE_RFCOMM_SERVICE',
-  '1800': 'Device Info',
-  '1801': 'unknown',
-});
-
 class BLEConnector extends BaseConnector {
   constructor(droneFilter = '') {
     super();
@@ -53,7 +39,9 @@ class BLEConnector extends BaseConnector {
 
   connect() {
     if (this.peripheral) {
-      noble.warn('Already connected. Ignoring connect request');
+      Logger.warn('Already connected. Ignoring connect request');
+
+      return;
     }
 
     if (noble.state === 'unknown') {
@@ -143,18 +131,16 @@ class BLEConnector extends BaseConnector {
 
       Logger.debug('Preforming handshake');
       for (const uuid of handshakeUuids) {
-        const target = this.getCharacteristic(uuid);
-
-        target.subscribe();
-        target.on('data', data => this.emit('data', data));
+        // Subscribing enables notifications; the actual data is handled on the receive characteristics below
+        this.getCharacteristic(uuid).subscribe();
       }
 
-      Logger.debug('Adding listeners: ' + characteristicReceiveUuids.values().join(', '));
-      for (const uuid of characteristicReceiveUuids.values()) {
+      Logger.debug('Adding listeners: ' + receiveUuids.values().join(', '));
+      for (const uuid of receiveUuids.values()) {
         const target = this.getCharacteristic(uuid);
 
         target.subscribe();
-        target.on('data', data => this.emit('data', data));
+        target.on('data', data => this._handleIncoming(data));
       }
 
       Logger.info(`Device connected ${this.peripheral.advertisement.localName}`);
@@ -221,7 +207,7 @@ class BLEConnector extends BaseConnector {
   }
 
   sendCommand(command) {
-    const buffer = Buffer.concat([new Buffer(2), command.toBuffer()]);
+    const buffer = Buffer.concat([Buffer.alloc(2), command.toBuffer()]);
     const packetId = this._getStep(command.bufferFlag);
 
     buffer.writeUInt16LE(command.bufferFlag, 0);
@@ -241,8 +227,38 @@ class BLEConnector extends BaseConnector {
     });
   }
 
-  ack() {
+  /**
+   * Handles an incoming BLE notification: forwards the raw buffer and, for data
+   * frames, parses the payload into a {@link DroneCommand} and emits it as 'incoming'
+   * so the base connector can store the sensor reading.
+   * @param {Buffer} data - The raw characteristic notification buffer
+   * @returns {void}
+   * @private
+   */
+  _handleIncoming(data) {
+    // Forward the raw buffer for low level consumers
+    this.emit('data', data);
 
+    const type = bufferType.findForValue(data.readUInt8(0));
+
+    if (type === 'ACK') {
+      // @todo resolve sendCommand callbacks for BLE acks
+      return;
+    }
+
+    // The first two bytes are the frame header (type + sequence number)
+    if (data[2] === 0) {
+      return;
+    }
+
+    try {
+      const command = this.parser.parseBuffer(data.slice(2));
+
+      this.emit('incoming', command);
+    } catch (e) {
+      Logger.warn('Unable to parse packet:', data);
+      Logger.warn(e);
+    }
   }
 }
 

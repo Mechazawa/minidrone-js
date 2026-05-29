@@ -1,5 +1,4 @@
-const {DroneConnection, CommandParser, BLEConnector} = require('minidrone-js');
-const {WifiConnector} = require("../src");
+const {DroneConnection, CommandParser, BLEConnector, WifiConnector} = require('minidrone-js');
 
 // const connector = new BLEConnector();
 const connector = new WifiConnector();

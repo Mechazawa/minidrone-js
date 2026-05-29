@@ -1,6 +1,5 @@
 const DroneCommandArgument = require('./DroneCommandArgument');
-const Enum = require('./util/Enum');
-const { sendUuids, serviceUuids} = require('./CharacteristicEnums');
+const { sendUuids } = require('./CharacteristicEnums');
 const { bufferType, bufferCharacteristicTranslationMap, bufferIds } = require('./BufferEnums');
 
 /**

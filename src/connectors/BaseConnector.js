@@ -71,10 +71,10 @@ class BaseConnector extends EventEmitter {
         // For if the command times out
         const timeout = setTimeout(reject, 5 * 1000, new Error('Command timed out after 5 seconds'));
 
-        const accept = () => {
+        const accept = (...args) => {
           clearTimeout(timeout);
 
-          _accept(...arguments);
+          _accept(...args);
         };
 
         this._commandCallback[bufferId][packetId] = { accept, reject };
@@ -112,11 +112,9 @@ class BaseConnector extends EventEmitter {
    * @see {@link DroneCommand.getToken}
    */
   getSensorFromToken(token) {
-    let command = this._sensorStore[token];
+    const command = this._sensorStore[token];
 
-    if (command) {
-      return command.clone();
-    }
+    return command && command.clone();
   }
 
   setSensor(command) {
