@@ -29,7 +29,7 @@ pluggable connectors, adding Wifi support alongside Bluetooth LE (#21, #164).
 - Wifi support: mDNS auto-discovery (optional native `mdns`) or a direct
   `connect(host, port)`.
 - `'error'` event on connectors/`DroneConnection`, forwarded from the transport.
-- Acknowledgement handling for both transports — outgoing commands resolve on
+- Acknowledgement handling for both transports: outgoing commands resolve on
   the drone's ACK, and incoming `DATA_WITH_ACK` frames are acked back.
 - A `node:test` test suite (`npm test`) run in CI on Node 20/22/24, and an
   `engines` (`node >=20`) and `files` allow-list in `package.json`.
