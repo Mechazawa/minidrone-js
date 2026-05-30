@@ -25,7 +25,12 @@ class WifiConnector extends BaseConnector {
   }
 
   /**
-   * @inheritDoc
+   * Connect to the drone. With no arguments the drone is auto-discovered over mDNS
+   * (requires the optional 'mdns' dependency); pass host and port to connect directly.
+   * @param {string} [host=null] - Drone IP address; skips mDNS discovery when provided
+   * @param {number} [port=null] - Drone discovery/handshake port
+   * @returns {Promise} - Resolves when the connection has been established
+   * @async
    */
   connect(host = null, port = null) {
     if (this.browser || this.server || this.client) {

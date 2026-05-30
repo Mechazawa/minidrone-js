@@ -127,8 +127,8 @@ class BaseConnector extends EventEmitter {
     /**
      * Fires when a new sensor reading has been received
      *
-     * @event DroneConnection#sensor:
-     * @type {DroneCommand} - The sensor reading
+     * @event BaseConnector#sensor:
+     * @type {DroneCommand}
      * @example
      * connection.on('sensor:minidrone-UsbAccessoryState-GunState', function(sensor) {
      *  if (sensor.state.value === sensor.state.enum.READY) {

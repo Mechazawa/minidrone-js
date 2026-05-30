@@ -30,6 +30,11 @@ class BLEConnector extends BaseConnector {
     this.characteristics = [];
   }
 
+  /**
+   * Scan for and connect to the drone over Bluetooth LE. Connection progress is
+   * reported through the 'connected'/'error' events rather than the returned value.
+   * @returns {void}
+   */
   connect() {
     if (this.peripheral) {
       Logger.warn('Already connected. Ignoring connect request');
