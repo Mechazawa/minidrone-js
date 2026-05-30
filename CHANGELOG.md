@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.1]
 
 ### Added
 - TypeScript declarations (`.d.ts`) generated from the JSDoc, shipped in the
@@ -52,4 +52,5 @@ pluggable connectors, adding Wifi support alongside Bluetooth LE (#21, #164).
 - `DroneConnection` forwarded the wrong disconnect event, never re-emitted
   sensor events, and called the non-existent `DroneCommand.copy()`.
 
+[0.7.1]: https://github.com/Mechazawa/minidrone-js/releases/tag/v0.7.1
 [0.7.0]: https://github.com/Mechazawa/minidrone-js/releases/tag/v0.7.0

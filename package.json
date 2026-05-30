@@ -1,6 +1,6 @@
 {
   "name": "minidrone-js",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Parrot Minidrone library",
   "main": "index.js",
   "types": "types/index.d.ts",
