@@ -1,31 +1,42 @@
-const { DroneConnection, CommandParser } = require('minidrone-js');
+const { CommandParser, WifiConnector } = require('minidrone-js');
 const Logger = require('winston');
 
 Logger.level = 'debug';
 
 const parser = new CommandParser();
-const drone = new DroneConnection();
+const drone = new WifiConnector();
+
+drone.connect();
 
 const autoTakeOffOn = parser.getCommand('minidrone', 'Piloting', 'AutoTakeOffMode', { state: 1 });
 const autoTakeOffOff = parser.getCommand('minidrone', 'Piloting', 'AutoTakeOffMode', { state: 0 });
+const allState = parser.getCommand('common', 'Common', 'AllStates');
 
 function sleep(ms) {
   return new Promise(a => setTimeout(a, ms));
 }
 
 drone.on('connected', async () => {
-  await drone.runCommand(autoTakeOffOff);
-  Logger.debug('Command got ACK\'d');
+  await sleep(200);
+
+  await drone.sendCommand(allState);
+
+  await drone.sendCommand(autoTakeOffOn);
 
   await sleep(2000);
 
-  await drone.runCommand(autoTakeOffOn);
-  Logger.debug('Command got ACK\'d');
+  await drone.sendCommand(autoTakeOffOff);
 
-  await sleep(2000);
+  Logger.debug('values: ');
 
-  await drone.runCommand(autoTakeOffOff);
-  Logger.debug('Command got ACK\'d');
+  for (const command of Object.values(drone._sensorStore)) {
+    Logger.debug(command.toString(true));
+  }
 
-  process.exit();
+  while (true) {
+    await sleep(2000);
+
+    drone.sendCommand(allState);
+  }
+  // process.exit();
 });

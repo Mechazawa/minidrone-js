@@ -90,7 +90,7 @@ class Enum {
    * @returns {boolean} - key exists
    */
   hasKey(name) {
-    return this.keys().includes(name);
+    return name in this;
   }
 
   /**

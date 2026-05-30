@@ -1,0 +1,341 @@
+const BaseConnector = require('./BaseConnector');
+const Logger = require('winston');
+const dgram = require('dgram');
+const net = require('net');
+const ARDiscoveryError = require('../ARDiscoveryError');
+const { bufferType } = require('../BufferEnums');
+const { promisify } = require('../util/reflection');
+
+/**
+ * Wifi connector for the drone
+ *
+ * Used for connecting to drones using Wifi
+ */
+class WifiConnector extends BaseConnector {
+  /**
+   * Create a Wifi connector
+   * @param {string?} droneFilter - Name of the drone
+   * @param {string?} deviceId - Persistent device id for reconnection
+   */
+  constructor(droneFilter = '', deviceId = '') {
+    super();
+
+    this.droneFilter = droneFilter;
+    this.deviceId = deviceId || ('000' + Math.round(Math.random() * 1000).toString()).slice(-4); // Should be persistant between connections
+  }
+
+  /**
+   * Connect to the drone. With no arguments the drone is auto-discovered over mDNS
+   * (requires the optional 'mdns' dependency); pass host and port to connect directly.
+   * @param {string} [host=null] - Drone IP address; skips mDNS discovery when provided
+   * @param {number} [port=null] - Drone discovery/handshake port
+   * @returns {Promise} - Resolves when the connection has been established
+   * @async
+   */
+  connect(host = null, port = null) {
+    if (this.browser || this.server || this.client) {
+      return Promise.resolve();
+    }
+
+    if (host && port) {
+      return this._connect(host, port);
+    }
+
+    // mDNS auto-discovery relies on the optional native 'mdns' dependency.
+    let mdns;
+
+    try {
+      mdns = require('mdns');
+    } catch (e) {
+      const message = 'mDNS auto-discovery requires the optional "mdns" dependency, which is not ' +
+        'installed or could not be built (it needs libavahi-compat-libdnssd-dev on Linux). ' +
+        'Install it, or connect directly with connect(host, port).';
+
+      return Promise.reject(new Error(message));
+    }
+
+    Logger.debug('Starting mDNS browser');
+
+    const resolverSequence = [
+      // eslint-disable-next-line new-cap
+      mdns.rst.DNSServiceResolve(),
+      // eslint-disable-next-line new-cap
+      mdns.rst.DNSServiceGetAddrInfo({families: [4]}),
+    ];
+
+    this.browser = mdns.createBrowser(mdns.udp('_arsdk-090b'), {resolverSequence}); // @todo browse all
+
+    return new Promise(accept => {
+      this.browser.on('serviceUp', service => this._onMdnsServiceDiscovery(service).then(connected => {
+        if (connected) {
+          accept();
+        }
+      }));
+
+      this.browser.start();
+    });
+  }
+
+  /**
+   * @inheritDoc
+   */
+  get connected() {
+    return !this.browser && this.server && this.client;
+  }
+
+  async _onMdnsServiceDiscovery(service) {
+    if (!service.fullname.includes('_arsdk-')) {
+      Logger.debug(`Skipping mdns service ${service.fullname}`);
+      return false;
+    }
+
+    if (this.droneFilter && service.name !== this.droneFilter) {
+      Logger.debug(`Found drone ${service.name} but it didn't match the drone filter`);
+      return false;
+    }
+
+    this.browser.stop();
+    delete this.browser;
+
+    Logger.debug(`Found drone ${service.name}`);
+
+    try {
+      const host = service.addresses && service.addresses[0] || service.host;
+
+      await this._connect(host, service.port);
+    } catch (e) {
+      this.disconnect();
+
+      throw e;
+    }
+
+    return true;
+  }
+
+  async _connect(host, port) {
+    Logger.info(`Doing Wifi handshake with ${host}`);
+
+    await this._startServer();
+
+    this.ip = host;
+
+    let data = await this._sendHandshake(this.ip, port);
+
+    data = data.toString();
+    data = data.replace('\0', ''); // Remove trailing nullbyte
+    data = JSON.parse(data);
+
+    Logger.debug('Got drone response: ', data);
+
+    if (data.status !== 0) {
+      const error = ARDiscoveryError.findForValue(data.status);
+
+      throw new Error(error);
+    }
+
+    this.port = data.c2d_port;
+
+    this.client = dgram.createSocket('udp4');
+
+    this.client.on('error', err => {
+      this.disconnect();
+
+      throw err;
+    });
+
+    Logger.debug(`Stream available at ${this.rtspStreamUri}`);
+
+    /**
+     * Drone connected event
+     * You can control the drone once this event has been triggered.
+     *
+     * @event BaseConnector#connected
+     */
+    this.emit('connected');
+  }
+
+  async _startServer() {
+    if (this.server) {
+      Logger.warn('Found existing running server, closing it');
+      this.server.close();
+    }
+
+    this.server = dgram.createSocket('udp4');
+
+    this.server.on('close', () => this.disconnect());
+    this.server.on('error', (err) => {
+      this.disconnect();
+
+      throw err;
+    });
+
+    this.server.on('message', msg => this._handleIncoming(msg));
+
+    this.server.bind(0); // random utp port
+
+    await promisify(this.server.once.bind(this.server))('listening');
+  }
+
+  async _sendHandshake(ip, port) {
+    const address = this.server.address();
+
+    Logger.debug(`Server listening ${address.address}:${address.port}`);
+
+    const handshakeClient = new net.Socket();
+
+    handshakeClient.connect(port, ip, () => {
+      const config = {
+        'd2c_port': this.server.address().port,
+        'controller_type': 'minidrone-js',
+        'controller_name': 'me.shodan.minidrone-js',
+        // 'device_id': this.deviceId, // @ todo drone returns errors
+      };
+
+      Logger.debug('Negotiating connection:', config);
+
+      handshakeClient.write(JSON.stringify(config));
+    });
+
+    const data = await promisify(handshakeClient.once.bind(handshakeClient))('data');
+
+    handshakeClient.destroy();
+
+    return data;
+  }
+
+  /**
+   * Write raw buffer to the drone
+   * @param {Buffer} buffer - The raw packet data to send to the drone
+   * @returns {number} - Resolves with the number of bytes sent
+   * @async
+   */
+  write(buffer) {
+    return new Promise((accept, reject) => {
+      this.client.send(buffer, 0, buffer.length, this.port, this.ip, err => {
+        if (err) {
+          reject(err);
+
+          return;
+        }
+
+        accept(buffer.length);
+      });
+    });
+  }
+
+  /**
+   * Disconnect from the drone
+   * @emits BaseConnector#disconnected
+   * @returns {void}
+   */
+  disconnect() {
+    if (this.browser) {
+      this.browser.stop();
+    }
+
+    if (this.client) {
+      this.client.close();
+    }
+
+    if (this.server) {
+      // Prevent the 'close' handler from re-entering disconnect()
+      this.server.removeAllListeners('close');
+      this.server.close();
+    }
+
+    delete this.browser;
+    delete this.server;
+    delete this.ip;
+    delete this.port;
+    delete this.client;
+
+    Logger.info('Disconnected');
+
+    this.emit('disconnected');
+  }
+
+  /**
+   * Send a command to the drone
+   * @param {DroneCommand} command - Command to send
+   * @returns {Promise} - Resolves when the command has been acknowledged or rejects if it times out
+   */
+  async sendCommand(command) {
+    const commandBuffer = command.toBuffer();
+    const buffer = Buffer.concat([Buffer.alloc(7), commandBuffer]);
+    const bufferId = command.bufferId;
+    const packetId = this._getStep(bufferId);
+
+    buffer.writeUInt8(command.bufferFlag, 0); // data type
+    buffer.writeUInt8(bufferId, 1); // buffer id
+    buffer.writeUInt8(packetId, 2); // sequence number
+    buffer.writeUInt32LE(commandBuffer.length + 7, 3); // frame size
+
+    await this.write(buffer);
+
+    try {
+      return await this._setAckCallback(command, packetId);
+    } catch (e) {
+      if (e.message.startsWith('Command timed out')) {
+        this.disconnect();
+      }
+
+      throw e;
+    }
+  }
+
+  _handleIncoming(buffer) {
+    const type = bufferType.findForValue(buffer.readUInt8(0));
+
+    switch (type) {
+      case 'ACK':
+        const bufferId = buffer.readUInt8(1) - 128;
+        const packetId = buffer.readUInt8(7);
+
+        const callback = (this._commandCallback[bufferId] || {})[packetId];
+
+        if (callback && typeof callback.accept === 'function') {
+          callback.accept();
+
+          delete this._commandCallback[bufferId][packetId];
+        }
+
+        break;
+      case 'DATA_WITH_ACK':
+        const ackBuffer = Buffer.alloc(8);
+
+        ackBuffer.writeUInt8(bufferType.ACK, 0);
+        ackBuffer.writeUInt8(buffer.readUInt8(1) + 128, 1);
+        ackBuffer.writeUInt8(this._getStep(bufferType.ACK), 2);
+        ackBuffer.writeUInt32LE(8, 3); // frame size, always 8 for an ACK
+        ackBuffer.writeUInt8(buffer.readUInt8(2), 7);
+
+        this.write(ackBuffer);
+      // falls through
+      case 'DATA':
+      case 'LOW_LATENCY_DATA':
+        const frame = buffer.slice(7);
+
+        this.emit('data', frame);
+
+        try {
+          const command = this.parser.parseBuffer(frame);
+
+          Logger.debug(command.toString(true));
+
+          this.emit('incoming', command);
+        } catch (e) {
+          Logger.error(e);
+        }
+    }
+  }
+
+  /**
+   * Returns an approximation of the rtsp stream uri. Sometimes it's the gateway not the drone itself oddly enough.
+   * @returns {string} - stream uri
+   */
+  get rtspStreamUri() {
+    return 'rtsp://192.168.99.1/media/stream2';
+  }
+}
+
+module.exports = WifiConnector;
