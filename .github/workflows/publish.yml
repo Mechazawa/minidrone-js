@@ -1,0 +1,48 @@
+name: Publish
+
+# Publishes to npm when a version tag (v*) is pushed. The tag must match the
+# version in package.json. Authentication uses npm Trusted Publishing (OIDC) —
+# no NPM_TOKEN secret is needed; configure this repo + workflow as a trusted
+# publisher for the package on npmjs.com. Provenance is generated automatically.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  id-token: write # OIDC token for npm Trusted Publishing + provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        registry-url: 'https://registry.npmjs.org'
+    - name: Update npm (Trusted Publishing needs npm >= 11.5.1)
+      run: npm install -g npm@latest
+    - name: Install OS Packages
+      run: sudo apt update && sudo apt install -y libavahi-compat-libdnssd-dev
+    - name: Install Dependencies
+      run: npm ci
+    - name: Verify tag matches package.json version
+      run: |
+        PKG_VERSION="$(node -p "require('./package.json').version")"
+        TAG_VERSION="${GITHUB_REF_NAME#v}"
+        echo "tag=$TAG_VERSION package.json=$PKG_VERSION"
+        if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+          echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION"
+          exit 1
+        fi
+    - name: Lint
+      run: npx eslint src
+    - name: Test
+      run: npm test
+    - name: Publish to npm
+      # OIDC trusted publishing — no token; prepack regenerates the .d.ts first.
+      run: npm publish --access public
