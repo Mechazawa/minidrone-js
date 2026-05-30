@@ -3,7 +3,6 @@ const Logger = require('winston');
 const dgram = require('dgram');
 const net = require('net');
 const ARDiscoveryError = require('../ARDiscoveryError');
-const mdns = require('mdns');
 const { bufferType } = require('../BufferEnums');
 const { promisify } = require('../util/reflection');
 
@@ -35,6 +34,19 @@ class WifiConnector extends BaseConnector {
 
     if (host && port) {
       return this._connect(host, port);
+    }
+
+    // mDNS auto-discovery relies on the optional native 'mdns' dependency.
+    let mdns;
+
+    try {
+      mdns = require('mdns');
+    } catch (e) {
+      const message = 'mDNS auto-discovery requires the optional "mdns" dependency, which is not ' +
+        'installed or could not be built (it needs libavahi-compat-libdnssd-dev on Linux). ' +
+        'Install it, or connect directly with connect(host, port).';
+
+      return Promise.reject(new Error(message));
     }
 
     Logger.debug('Starting mDNS browser');

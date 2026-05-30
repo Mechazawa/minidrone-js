@@ -19,10 +19,12 @@
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
-    "mdns": "^2.4.0",
     "ava": "8.0.1",
     "eslint": "^8.54.0",
     "jsdoc": "^4.0.2"
+  },
+  "optionalDependencies": {
+    "mdns": "^2.4.0"
   },
   "scripts": {
     "test": "echo No tests defined",
