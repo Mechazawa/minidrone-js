@@ -3,6 +3,7 @@
   "version": "0.7.0",
   "description": "Parrot Minidrone library",
   "main": "index.js",
+  "types": "types/index.d.ts",
   "repository": "https://github.com/Mechazawa/minidrone-js",
   "author": "Bas 'Mechazawa' <mega@ioexception.at>",
   "license": "MIT",
@@ -11,6 +12,7 @@
   },
   "files": [
     "src",
+    "types",
     "index.js",
     "README.md",
     "LICENSE"
@@ -27,10 +29,12 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@stylistic/eslint-plugin": "^5.10.0",
+    "@types/node": "^25.9.1",
     "eslint": "^10.4.1",
     "globals": "^17.6.0",
     "jsdoc": "^4.0.2",
-    "node-gyp": "^12.0.0"
+    "node-gyp": "^12.0.0",
+    "typescript": "^6.0.3"
   },
   "optionalDependencies": {
     "mdns": "^2.4.0"
@@ -38,6 +42,8 @@
   "scripts": {
     "test": "node --test",
     "docs": "npx jsdoc --configure .jsdoc.json --verbose; mkdir -p docs; rm -r docs; mv build/docs/minidrone-js/* docs; rm -r build/docs",
-    "lint": "npx eslint src --fix --cache"
+    "lint": "npx eslint src --fix --cache",
+    "build:types": "tsc -p tsconfig.json",
+    "prepack": "tsc -p tsconfig.json"
   }
 }

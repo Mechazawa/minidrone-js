@@ -26,6 +26,12 @@ and sending commands based on the [xml specification].
 npm install minidrone-js --save
 ```
 
+## TypeScript
+
+The package ships TypeScript declarations (`.d.ts`), generated from the JSDoc, so
+editors and TypeScript projects get autocompletion and type-checking out of the
+box — no separate `@types` package required.
+
 ## Example
 
 This example will make the drone take-off, do a flip and then land again.

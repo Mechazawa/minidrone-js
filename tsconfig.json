@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "types",
+    "rootDir": ".",
+    "module": "node16",
+    "moduleResolution": "node16",
+    "target": "es2020",
+    "skipLibCheck": true,
+    "noEmitOnError": false,
+    "types": ["node"]
+  },
+  "include": ["index.js", "src/**/*.js"],
+  "exclude": ["node_modules", "test", "examples", "types", "build", "docs"]
+}
