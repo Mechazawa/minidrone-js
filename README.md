@@ -29,8 +29,8 @@ npm install minidrone-js --save
 ## TypeScript
 
 The package ships TypeScript declarations (`.d.ts`), generated from the JSDoc, so
-editors and TypeScript projects get autocompletion and type-checking out of the
-box — no separate `@types` package required.
+editors and TypeScript projects get autocompletion and type-checking. No separate
+`@types` package is required.
 
 ## Example
 
@@ -87,8 +87,8 @@ A `DroneConnection` wraps a *connector* that handles the transport. Two are prov
 
 | Connector | Transport | `connect()` |
 | --- | --- | --- |
-| `BLEConnector` | Bluetooth LE (via `@abandonware/noble`) | `connect()` — scans for and connects to a nearby drone |
-| `WifiConnector` | Wifi (UDP/TCP) | `connect()` — auto-discovers over mDNS; or `connect(host, port)` to connect directly |
+| `BLEConnector` | Bluetooth LE (via `@abandonware/noble`) | `connect()` scans for and connects to a nearby drone |
+| `WifiConnector` | Wifi (UDP/TCP) | `connect()` auto-discovers over mDNS, or `connect(host, port)` connects directly |
 
 ```js
 const { DroneConnection, WifiConnector } = require('minidrone-js');
@@ -101,8 +101,8 @@ const drone = new DroneConnection(new WifiConnector());
 mDNS auto-discovery relies on the optional native [`mdns`] dependency. It is an
 `optionalDependency`, so installs never fail when it can't be built (e.g. on Node
 versions where it has no prebuilt binary). Without it, BLE and the direct
-`connect(host, port)` path still work — only no-argument Wifi discovery needs it
-(it rejects with a clear error otherwise). On Linux `mdns` needs
+`connect(host, port)` path still work. Only no-argument Wifi discovery needs it,
+and it rejects with a clear error when it is unavailable. On Linux `mdns` needs
 `libavahi-compat-libdnssd-dev`.
 
 [`mdns`]: https://www.npmjs.com/package/mdns
@@ -121,17 +121,17 @@ drone.connect();
 
 ### Bluetooth on unsupported hardware, or a custom transport
 
-`BLEConnector` uses [`@abandonware/noble`], loaded lazily — a missing or
-unsupported native binding no longer breaks `require('minidrone-js')`; only
-constructing a default `BLEConnector` needs noble. If your Bluetooth hardware
-isn't supported, you can:
+`BLEConnector` loads [`@abandonware/noble`] lazily, only when you construct one.
+So `require('minidrone-js')` works without noble's native binding, and Wifi or a
+custom connector run without it. If noble does not support your Bluetooth
+hardware, you have three options:
 
-- **Inject your own noble** (e.g. one configured with a custom hci-socket binding):
-  `new BLEConnector(droneFilter, myNoble)`.
-- **Use Wifi instead** — `WifiConnector` needs no Bluetooth at all.
-- **Bring your own transport** — extend `BaseConnector`, implement `connect()` and
+- **Inject your own noble** (for example, one configured with a custom hci-socket
+  binding): `new BLEConnector(droneFilter, myNoble)`.
+- **Use Wifi instead.** `WifiConnector` needs no Bluetooth at all.
+- **Bring your own transport.** Extend `BaseConnector`, implement `connect()` and
   `sendCommand(command)`, and emit `connected`, `incoming` (a parsed
-  `DroneCommand`) and `disconnected`. Pass it to `DroneConnection` like any other
+  `DroneCommand`), and `disconnected`. Pass it to `DroneConnection` like any other
   connector.
 
 [`@abandonware/noble`]: https://www.npmjs.com/package/@abandonware/noble
@@ -162,7 +162,7 @@ drone.on('sensor:minidrone-UsbAccessoryState-GunState', (sensor) => {
 
 ## Migrating from 0.6.x
 
-`DroneConnection` no longer talks to the radio itself — it now takes a connector:
+`DroneConnection` now takes a connector:
 
 ```js
 // 0.6.x
