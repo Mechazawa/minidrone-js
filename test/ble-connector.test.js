@@ -1,10 +1,17 @@
 'use strict';
 
-// BLEConnector requires '@abandonware/noble', whose native binding may be absent
-// in this environment. Intercept the module loader and hand back a fake before
-// requiring BLEConnector so the test never touches real BLE hardware.
-const Module = require('module');
-const _load = Module._load;
+const { test } = require('node:test');
+const assert = require('node:assert');
+
+const BLEConnector = require('../src/connectors/BLEConnector');
+const { bufferType } = require('../src/BufferEnums');
+const { sendUuids } = require('../src/CharacteristicEnums');
+
+// Silence the harmless "[winston] Attempt to write logs with no transports" noise.
+require('winston').clear();
+
+// A stand-in for @abandonware/noble so the tests never load the native binding
+// or touch real BLE hardware. Injected via the BLEConnector constructor.
 const fakeNoble = {
   on() {},
   once() {},
@@ -13,27 +20,14 @@ const fakeNoble = {
   startScanning() {},
   stopScanning() {},
 };
-Module._load = function (request, ...rest) {
-  return request === '@abandonware/noble' ? fakeNoble : _load.call(this, request, ...rest);
-};
-
-const BLEConnector = require('../src/connectors/BLEConnector');
-const { bufferType } = require('../src/BufferEnums');
-const { sendUuids } = require('../src/CharacteristicEnums');
-
-const { test } = require('node:test');
-const assert = require('node:assert');
-
-// Silence the harmless "[winston] Attempt to write logs with no transports" noise.
-require('winston').clear();
 
 /**
- * Build a fresh connector with a warmed-up parser and a stubbed write() that
- * records every frame instead of touching a noble characteristic.
+ * Build a fresh connector with an injected (fake) noble, a warmed-up parser, and a
+ * stubbed write() that records every frame instead of touching a noble characteristic.
  * @returns {{ connector: BLEConnector, sent: Array<{buf: Buffer, ch: string}> }}
  */
 function makeConnector() {
-  const connector = new BLEConnector();
+  const connector = new BLEConnector('', fakeNoble);
 
   connector.parser.warmup();
 
@@ -47,6 +41,20 @@ function makeConnector() {
 
   return { connector, sent };
 }
+
+test('the package and BLEConnector load without noble\'s native binding (issue #82)', () => {
+  // Requiring the package must not eagerly require @abandonware/noble - otherwise a
+  // missing/unsupported native binding crashes Wifi and custom-connector users too.
+  const index = require('../src');
+
+  assert.strictEqual(typeof index.BLEConnector, 'function', 'BLEConnector should load');
+
+  // And a custom noble can be injected (e.g. one configured for unsupported hardware).
+  const connector = new BLEConnector('drone-name', fakeNoble);
+
+  assert.strictEqual(connector.noble, fakeNoble, 'the injected noble instance should be used');
+  assert.strictEqual(connector.droneFilter, 'drone-name', 'the drone filter should be set');
+});
 
 test('sendCommand writes one frame for an ack command and registers a flat callback', async () => {
   const { connector, sent } = makeConnector();
@@ -196,8 +204,6 @@ test('_handleIncoming acks a DATA_WITH_ACK frame and still emits incoming', () =
 });
 
 test('the package index exports the public connector and command surface', () => {
-  // The noble mock is still active, so requiring the index (which pulls in
-  // BLEConnector) is safe.
   const index = require('../src');
 
   assert.strictEqual(typeof index.DroneCommand, 'function', 'DroneCommand should be exported');
@@ -206,12 +212,4 @@ test('the package index exports the public connector and command surface', () =>
   assert.strictEqual(typeof index.BLEConnector, 'function', 'BLEConnector should be exported');
   assert.strictEqual(typeof index.WifiConnector, 'function', 'WifiConnector should be exported');
   assert.strictEqual(typeof index.CommandParser, 'function', 'CommandParser should be exported');
-});
-
-// Restore the original module loader so the interception does not leak into
-// other test files sharing the process.
-test('restore the module loader', () => {
-  Module._load = _load;
-
-  assert.strictEqual(Module._load, _load, 'the original module loader should be restored');
 });

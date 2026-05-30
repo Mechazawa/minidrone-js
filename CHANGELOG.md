@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- TypeScript declarations (`.d.ts`) generated from the JSDoc, shipped in the
+  package (#167).
+- `BLEConnector` accepts a custom `noble` instance: `new BLEConnector(filter, noble)` (#82).
+- CI publishes to npm on `v*` tags via Trusted Publishing (#168).
+
+### Changed
+- `BLEConnector` loads `@abandonware/noble` lazily, so a missing/unsupported
+  native binding no longer breaks `require('minidrone-js')` for Wifi or
+  custom-connector users (#82).
+- Migrated ESLint to v10 (flat config) (#166).
+
 ## [0.7.0]
 
 Connector architecture: transport handling moved out of `DroneConnection` into
