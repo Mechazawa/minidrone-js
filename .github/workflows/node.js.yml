@@ -43,6 +43,9 @@ jobs:
     - name: Lint
       run: npx eslint src
 
+    - name: Test
+      run: npm test
+
     - name: Generate Documentation
       if: matrix.node-version == 22
       run: npm run docs
