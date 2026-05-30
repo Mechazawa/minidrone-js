@@ -2,6 +2,7 @@
 /dist/
 /build/
 /docs/
+/types/
 !/src/
 /local/
 
