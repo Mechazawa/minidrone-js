@@ -28,8 +28,8 @@ class WifiConnector extends BaseConnector {
    * @inheritDoc
    */
   connect(host = null, port = null) {
-    if (!(!this.browser && !this.server && !this.client)) {
-      return new Promise(accept => accept());
+    if (this.browser || this.server || this.client) {
+      return Promise.resolve();
     }
 
     if (host && port) {
@@ -61,7 +61,11 @@ class WifiConnector extends BaseConnector {
     this.browser = mdns.createBrowser(mdns.udp('_arsdk-090b'), {resolverSequence}); // @todo browse all
 
     return new Promise(accept => {
-      this.browser.on('serviceUp', service => this._onMdnsServiceDiscovery(service).then(c => !c || accept()));
+      this.browser.on('serviceUp', service => this._onMdnsServiceDiscovery(service).then(connected => {
+        if (connected) {
+          accept();
+        }
+      }));
 
       this.browser.start();
     });

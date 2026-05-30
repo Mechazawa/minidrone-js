@@ -2,7 +2,7 @@ const noble = require('@abandonware/noble');
 const BaseConnector = require('./BaseConnector');
 const Logger = require('winston');
 const { bufferType } = require('../BufferEnums');
-const { receiveUuids } = require('../CharacteristicEnums');
+const { receiveUuids, handshakeUuids } = require('../CharacteristicEnums');
 
 const MANUFACTURER_SERIALS = [
   '4300cf1900090100',
@@ -18,13 +18,6 @@ const DRONE_PREFIXES = [
   'Mambo_',
   'Blaze_',
   'NewZ_',
-];
-
-// http://forum.developer.parrot.com/t/minidrone-characteristics-uuid/4686/3
-const handshakeUuids = [
-  'fb0f', 'fb0e', 'fb1b', 'fb1c',
-  'fd22', 'fd23', 'fd24', 'fd52',
-  'fd53', 'fd54',
 ];
 
 class BLEConnector extends BaseConnector {
