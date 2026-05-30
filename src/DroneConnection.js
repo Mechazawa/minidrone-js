@@ -10,6 +10,7 @@ const Logger = require('winston');
  *
  * @fires DroneConnection#connected
  * @fires DroneConnection#disconnected
+ * @fires DroneConnection#error
  * @fires DroneConnection#sensor:
  * @property {BaseConnector} connector - The underlying drone connector
  */
@@ -27,6 +28,7 @@ class DroneConnection extends EventEmitter {
     // Forward the connector's lifecycle events on the connection instance
     this.connector.on('connected', () => this.emit('connected'));
     this.connector.on('disconnected', () => this.emit('disconnected'));
+    this.connector.on('error', err => this.emit('error', err));
 
     // Re-emit sensor readings received by the connector
     this.connector.on('sensor:*', command => {

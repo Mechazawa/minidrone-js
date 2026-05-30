@@ -75,7 +75,7 @@ class WifiConnector extends BaseConnector {
    * @inheritDoc
    */
   get connected() {
-    return this.browser && this.server && this.client;
+    return !this.browser && this.server && this.client;
   }
 
   async _onMdnsServiceDiscovery(service) {

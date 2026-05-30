@@ -68,7 +68,10 @@ class BLEConnector extends BaseConnector {
 
     peripheral.connect((error) => {
       if (error) {
-        throw error;
+        Logger.error('Failed to connect to peripheral:', error);
+        this.emit('error', error);
+
+        return;
       }
 
       this._peripheral = peripheral;
@@ -106,7 +109,10 @@ class BLEConnector extends BaseConnector {
   _setupPeripheral() {
     this.peripheral.discoverAllServicesAndCharacteristics((err, services, characteristics) => {
       if (err) {
-        throw err;
+        Logger.error('Failed to discover services and characteristics:', err);
+        this.emit('error', err);
+
+        return;
       }
 
       this.characteristics = characteristics;
