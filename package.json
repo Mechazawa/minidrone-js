@@ -1,11 +1,20 @@
 {
   "name": "minidrone-js",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Parrot Minidrone library",
   "main": "index.js",
   "repository": "https://github.com/Mechazawa/minidrone-js",
   "author": "Bas 'Mechazawa' <mega@ioexception.at>",
   "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "src",
+    "index.js",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
     "@abandonware/noble": "^1.9.2-23",
     "arsdk-xml": "1.0.0",

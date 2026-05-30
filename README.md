@@ -75,6 +75,84 @@ void async function() {
 }();
 ```
 
+## Connectors
+
+A `DroneConnection` wraps a *connector* that handles the transport. Two are provided:
+
+| Connector | Transport | `connect()` |
+| --- | --- | --- |
+| `BLEConnector` | Bluetooth LE (via `@abandonware/noble`) | `connect()` — scans for and connects to a nearby drone |
+| `WifiConnector` | Wifi (UDP/TCP) | `connect()` — auto-discovers over mDNS; or `connect(host, port)` to connect directly |
+
+```js
+const { DroneConnection, WifiConnector } = require('minidrone-js');
+
+const drone = new DroneConnection(new WifiConnector());
+// drone.connector.connect();          // mDNS auto-discovery
+// drone.connector.connect('192.168.99.3', 44444); // or connect directly
+```
+
+mDNS auto-discovery relies on the optional native [`mdns`] dependency. It is an
+`optionalDependency`, so installs never fail when it can't be built (e.g. on Node
+versions where it has no prebuilt binary). Without it, BLE and the direct
+`connect(host, port)` path still work — only no-argument Wifi discovery needs it
+(it rejects with a clear error otherwise). On Linux `mdns` needs
+`libavahi-compat-libdnssd-dev`.
+
+[`mdns`]: https://www.npmjs.com/package/mdns
+
+You can also use a connector directly without `DroneConnection`:
+
+```js
+const { WifiConnector, CommandParser } = require('minidrone-js');
+
+const parser = new CommandParser();
+const drone = new WifiConnector();
+
+drone.on('connected', () => drone.sendCommand(parser.getCommand('minidrone', 'Piloting', 'TakeOff')));
+drone.connect();
+```
+
+### Events
+
+`DroneConnection` (and the connectors) are `EventEmitter`s:
+
+| Event | Fired when |
+| --- | --- |
+| `connected` | the drone is connected and ready for commands |
+| `disconnected` | the connection to the drone was lost |
+| `error` | the underlying transport raised an error |
+| `sensor:<token>` | a sensor reading arrived (e.g. `sensor:minidrone-UsbAccessoryState-GunState`) |
+| `sensor:*` | any sensor reading arrived |
+
+```js
+drone.on('sensor:minidrone-UsbAccessoryState-GunState', (sensor) => {
+  if (sensor.state.value === sensor.state.enum.READY) {
+    console.log('The gun is ready to fire!');
+  }
+});
+```
+
+> **Error handling.** Like any Node `EventEmitter`, an `'error'` event with no
+> listener is thrown. Attach an `'error'` handler if you want to recover from
+> transport errors instead of crashing.
+
+## Migrating from 0.6.x
+
+`DroneConnection` no longer talks to the radio itself — it now takes a connector:
+
+```js
+// 0.6.x
+const drone = new DroneConnection();
+
+// 0.7.0+
+const drone = new DroneConnection(new BLEConnector()); // or new WifiConnector()
+```
+
+`connect()` lives on the connector, and `BLEConnector`/`WifiConnector` are
+exported from the package. Everything else (`runCommand`, `getSensor`,
+`sensor:*` events, `CommandParser`) is unchanged.
+
 ## Troubleshooting
 
 #### MacOS won't connect to the drone
@@ -103,7 +181,7 @@ blueutil on
 
 MIT License
 
-Copyright 2018 Mechazawa <mega@ioexception.at>
+Copyright 2018-2026 Mechazawa <mega@ioexception.at>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
