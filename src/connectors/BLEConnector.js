@@ -2,7 +2,7 @@ const noble = require('@abandonware/noble');
 const BaseConnector = require('./BaseConnector');
 const Logger = require('winston');
 const { bufferType } = require('../BufferEnums');
-const { receiveUuids, handshakeUuids } = require('../CharacteristicEnums');
+const { sendUuids, receiveUuids, handshakeUuids } = require('../CharacteristicEnums');
 
 const MANUFACTURER_SERIALS = [
   '4300cf1900090100',
@@ -283,6 +283,12 @@ class BLEConnector extends BaseConnector {
       return;
     }
 
+    // Frames the drone flags as DATA_WITH_ACK must be acknowledged back to it.
+    // The frame header is [type, sequence], so its sequence is at byte 1.
+    if (type === 'DATA_WITH_ACK') {
+      this._sendAck(data.readUInt8(1));
+    }
+
     // The first two bytes are the frame header (type + sequence number)
     if (data[2] === 0) {
       return;
@@ -296,6 +302,26 @@ class BLEConnector extends BaseConnector {
       Logger.warn('Unable to parse packet:', data);
       Logger.warn(e);
     }
+  }
+
+  /**
+   * Acknowledge a frame the drone sent with DATA_WITH_ACK. The ack is written to the
+   * ACK_COMMAND characteristic and mirrors the ack frames the drone sends us:
+   * [ACK type, our ack sequence, the acknowledged frame's sequence].
+   * @param {number} seq - Sequence number of the frame being acknowledged
+   * @returns {void}
+   * @private
+   */
+  _sendAck(seq) {
+    const buffer = Buffer.alloc(3);
+
+    buffer.writeUInt8(bufferType.ACK, 0);
+    buffer.writeUInt8(this._getStep(bufferType.ACK), 1);
+    buffer.writeUInt8(seq, 2);
+
+    Logger.debug(`SEND ACK for packet id ${seq}`);
+
+    this.write(buffer, sendUuids.ACK_COMMAND);
   }
 }
 
