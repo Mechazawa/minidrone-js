@@ -1,7 +1,7 @@
 name: Publish
 
 # Publishes to npm when a version tag (v*) is pushed. The tag must match the
-# version in package.json. Authentication uses npm Trusted Publishing (OIDC) —
+# version in package.json. Authentication uses npm Trusted Publishing (OIDC), so
 # no NPM_TOKEN secret is needed; configure this repo + workflow as a trusted
 # publisher for the package on npmjs.com. Provenance is generated automatically.
 
@@ -44,5 +44,5 @@ jobs:
     - name: Test
       run: npm test
     - name: Publish to npm
-      # OIDC trusted publishing — no token; prepack regenerates the .d.ts first.
+      # OIDC trusted publishing, no token. prepack regenerates the .d.ts first.
       run: npm publish --access public
