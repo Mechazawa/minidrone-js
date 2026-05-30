@@ -119,6 +119,23 @@ drone.on('connected', () => drone.sendCommand(parser.getCommand('minidrone', 'Pi
 drone.connect();
 ```
 
+### Bluetooth on unsupported hardware, or a custom transport
+
+`BLEConnector` uses [`@abandonware/noble`], loaded lazily — a missing or
+unsupported native binding no longer breaks `require('minidrone-js')`; only
+constructing a default `BLEConnector` needs noble. If your Bluetooth hardware
+isn't supported, you can:
+
+- **Inject your own noble** (e.g. one configured with a custom hci-socket binding):
+  `new BLEConnector(droneFilter, myNoble)`.
+- **Use Wifi instead** — `WifiConnector` needs no Bluetooth at all.
+- **Bring your own transport** — extend `BaseConnector`, implement `connect()` and
+  `sendCommand(command)`, and emit `connected`, `incoming` (a parsed
+  `DroneCommand`) and `disconnected`. Pass it to `DroneConnection` like any other
+  connector.
+
+[`@abandonware/noble`]: https://www.npmjs.com/package/@abandonware/noble
+
 ### Events
 
 `DroneConnection` (and the connectors) are `EventEmitter`s:

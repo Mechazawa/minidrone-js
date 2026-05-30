@@ -1,4 +1,3 @@
-const noble = require('@abandonware/noble');
 const BaseConnector = require('./BaseConnector');
 const Logger = require('winston');
 const { bufferType } = require('../BufferEnums');
@@ -21,10 +20,18 @@ const DRONE_PREFIXES = [
 ];
 
 class BLEConnector extends BaseConnector {
-  constructor(droneFilter = '') {
+  /**
+   * @param {string} [droneFilter=''] - Only connect to a drone with this advertised name
+   * @param {object} [noble] - A noble instance to use for BLE. Defaults to
+   *   `@abandonware/noble`, loaded lazily so the package still works (over Wifi or a
+   *   custom connector) when noble's native binding is unavailable. Pass your own
+   *   noble (e.g. configured with a custom hci-socket binding) for unsupported hardware.
+   */
+  constructor(droneFilter = '', noble = require('@abandonware/noble')) {
     super();
 
     this.droneFilter = droneFilter;
+    this.noble = noble;
 
     this._characteristicLookupCache = {};
     this.characteristics = [];
@@ -42,15 +49,15 @@ class BLEConnector extends BaseConnector {
       return;
     }
 
-    if (noble.state === 'unknown') {
+    if (this.noble.state === 'unknown') {
       Logger.debug('Noble state is unknown. Waiting for it to change to poweredOn');
-      noble.once('stateChange', () => this.connect());
-    } else if (noble.state === 'poweredOn') {
+      this.noble.once('stateChange', () => this.connect());
+    } else if (this.noble.state === 'poweredOn') {
       Logger.info('Searching for drones...');
 
-      noble.on('discover', peripheral => this._onPeripheralDiscovery(peripheral));
+      this.noble.on('discover', peripheral => this._onPeripheralDiscovery(peripheral));
 
-      noble.startScanning();
+      this.noble.startScanning();
     }
   }
 
@@ -69,7 +76,7 @@ class BLEConnector extends BaseConnector {
 
     Logger.info(`Peripheral found ${peripheral.advertisement.localName}`); // ex: Mambo_646859
 
-    noble.stopScanning();
+    this.noble.stopScanning();
 
     peripheral.connect((error) => {
       if (error) {
@@ -156,7 +163,7 @@ class BLEConnector extends BaseConnector {
        *
        * @event BaseConnector#disconnected
        */
-      noble.on('disconnect', () => this.disconnect());
+      this.noble.on('disconnect', () => this.disconnect());
 
       setTimeout(() => {
         /**
