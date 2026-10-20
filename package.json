@@ -33,7 +33,7 @@
     "eslint": "^10.4.1",
     "globals": "^17.6.0",
     "jsdoc": "^4.0.2",
-    "node-gyp": "^12.0.0",
+    "node-gyp": "^13.0.0",
     "typescript": "^6.0.3"
   },
   "optionalDependencies": {
